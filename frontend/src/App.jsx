@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import './App.css';
@@ -9,6 +9,7 @@ import InterviewComponent from './components/interview/InterviewComponent';
 
 function App() {
   const [questions, setQuestions] = useState([]);
+
   return (
     <Router>
       <div className="app-container">
@@ -16,7 +17,7 @@ function App() {
         <main className="main-content">
           <Routes>
             <Route path="/" element={<HomeComponent />} />
-            <Route path="/job-info" element={<JobInfoComponent />} />
+            <Route path="/job-info" element={<JobInfoComponent setQuestions={setQuestions} />} />
             <Route path="/interview" element={<InterviewComponent questions={questions} />} />
           </Routes>
         </main>

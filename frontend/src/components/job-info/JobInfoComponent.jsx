@@ -2,66 +2,56 @@ import React, { useState } from 'react';
 import './job-info.css';
 import { useNavigate } from 'react-router-dom';
 
-// Component receives setQuestions from parent (App.jsx) to store Gemini questions globally
-function JobInfoComponent({ setQuestions }) {
-  const [selectedRole, setSelectedRole] = useState(''); // State for selected job role
-  const [resumeFile, setResumeFile] = useState(null);   // State for uploaded resume file
-  const [loading, setLoading] = useState(false);        // Loading state to disable the form and show progress
-  const navigate = useNavigate();                         // React Router navigation hook
+function JobInfoComponent({}) {
+  const [selectedRole, setSelectedRole] = useState('');
+  const [resumeFile, setResumeFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Check that both fields are filled
     if (!selectedRole || !resumeFile) {
       alert("Please select a role and upload your resume.");
       return;
     }
 
-    // Prepare FormData to send file + role to backend
-    const formData = new FormData();
-    formData.append('resume', resumeFile);
-    formData.append('role', selectedRole);
-
+    setLoading(true);
     try {
-      setLoading(true); // Disable button while loading
+      // ✅ 1. Upload resume
+      const formData = new FormData();
+      formData.append('file', resumeFile);
 
-      // Send POST request to backend endpoint
-      console.log("Submitting to backend:", selectedRole, resumeFile);
-      const response = await fetch('http://127.0.0.1:8000/questions/generate', {
+      const uploadRes = await fetch('http://127.0.0.1:8000/file/upload-resume', {
         method: 'POST',
         body: formData,
       });
 
-      // Handle server error
-      if (!response.ok) throw new Error('Server Error');
+      if (!uploadRes.ok) throw new Error('Resume upload failed');
+      const uploadData = await uploadRes.json();
+      const resumeId = uploadData.resume_id;
+      console.log("✅ Resume uploaded, ID:", resumeId);
 
-      // Extract JSON response
-      const data = await response.json();
+      // ✅ 2. Navigate to interview with state
+      navigate('/interview', {
+        state: {
+          role: selectedRole,
+          resumeId: resumeId
+        }
+      });
 
-      // Save questions to state via parent setter
-      setQuestions(data.questions);
 
-      // Navigate to the interview page
-      navigate('/interview');
     } catch (error) {
-      // Show error to user
-      alert('Failed to generate questions. Try again.');
+      alert('Error starting interview. Check console.');
       console.error(error);
     } finally {
-      setLoading(false); // Re-enable form
+      setLoading(false);
     }
   };
 
   return (
     <div className="job-info-container">
       <h2>Step 1: Choose Role & Upload Resume</h2>
-
-      {/* Main Form */}
       <form onSubmit={handleSubmit}>
-        
-        {/* Dropdown for role selection */}
         <div className="input-group">
           <label>Select Job Role:</label>
           <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>
@@ -72,7 +62,6 @@ function JobInfoComponent({ setQuestions }) {
           </select>
         </div>
 
-        {/* File upload for resume (PDF only) */}
         <div className="input-group">
           <label>Upload Resume (PDF only):</label>
           <input
@@ -82,9 +71,8 @@ function JobInfoComponent({ setQuestions }) {
           />
         </div>
 
-        {/* Submit button */}
         <button type="submit" disabled={loading}>
-          {loading ? 'Generating...' : 'Start Interview'}
+          {loading ? 'Processing...' : 'Start Interview'}
         </button>
       </form>
     </div>

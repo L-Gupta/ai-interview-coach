@@ -1,24 +1,33 @@
-from fastapi import FastAPI, UploadFile, File, Body
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from routes import question_generator  # New merged router
-from typing import List
-from services.audio_handler import save_audio_file
-from services.stt_deepgram import transcribe_audio
-from services.emotion_model import analyze_emotion
+
+import requests
+import os
+from dotenv import load_dotenv
+
+from fileUpload.file_upload import router as file_router
+from ques_gen.router_ques_first import router as ques_router
+from ques_gen.router_ques_next import router as next_router
+from audio.audio_router import router as audio_router
+
+load_dotenv()
 
 app = FastAPI(title="AI Interview Coach API", version="1.0.0")
 
-# Allow frontend requests (React on localhost:3000)
+# CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
-    allow_methods=["*"], 
+    allow_methods=["*"],
     allow_headers=["*"]
 )
 
-# Include unified question generator route
-app.include_router(question_generator.router, prefix="/questions")
+# Interview route
+app.include_router(file_router, prefix="/file")
+app.include_router(audio_router, prefix="/audio")
+app.include_router(ques_router, prefix="/question")
+app.include_router(next_router, prefix="/question")
 
 @app.get("/")
 async def root():
@@ -26,41 +35,29 @@ async def root():
 
 @app.post("/analyze-audio/")
 async def analyze_audio(file: UploadFile = File(...)):
-    #Save file
-    filepath = await save_audio_file(file)          
+    temp_dir = os.path.join(os.path.dirname(__file__), "audio", "recordings")
+    os.makedirs(temp_dir, exist_ok=True)
+    file_path = os.path.join(temp_dir, file.filename)
 
-    #Transcribe audio
-    try:
-        transcript = transcribe_audio(filepath)
-    except Exception as e:
-        transcript = f"❌ Transcription error: {str(e)}"
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
 
-    #Analyze emotion
-    try:
-        emotion_result = analyze_emotion(filepath)
-    except Exception as e:
-        emotion_result = {"label": "error", "score": 0, "message": str(e)}
+    with open(file_path, "rb") as f:
+        audio_data = f.read()
 
-    return {
-        "transcript": transcript,
-        "emotion": emotion_result
+    headers = {
+        "Authorization": f"Token {os.getenv('DEEPGRAM_API_KEY')}",
+        "Content-Type": "audio/wav"
     }
 
-# Temporary session store
-session_responses = []
+    response = requests.post(
+        "https://api.deepgram.com/v1/listen",
+        headers=headers,
+        data=audio_data
+    )
 
-@app.post("/submit-answer/")
-async def submit_answer(
-    question_index: int = Body(...),
-    question: str = Body(...),
-    transcript: str = Body(...),
-    emotion: dict = Body(...)
-):
-    session_responses.append({
-        "question_index": question_index,
-        "question": question,
-        "transcript": transcript,
-        "emotion": emotion
-    })
-    return {"message": "Answer submitted successfully."}
+    if response.status_code != 200:
+        return { "transcript": "Transcription failed." }
 
+    transcript = response.json()['results']['channels'][0]['alternatives'][0]['transcript']
+    return { "transcript": transcript }
