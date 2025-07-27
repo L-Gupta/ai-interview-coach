@@ -47,4 +47,3 @@ def save_parsed_text_to_file(text: str, original_filename: str):
     
     print(f"📄 Parsed text saved to: {output_path}")
 
-

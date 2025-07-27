@@ -1,0 +1,48 @@
+.summary-container {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  font-family: Arial, sans-serif;
+}
+
+.summary-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #222;
+}
+
+.summary-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.summary-section h3 {
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.summary-section p, 
+.summary-section li {
+  color: #444;
+  font-size: 15px;
+}
+
+.download-btn {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 16px;
+  background: #007bff;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.download-btn:hover {
+  background: #0056b3;
+}

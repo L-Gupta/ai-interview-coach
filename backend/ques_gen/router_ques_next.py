@@ -25,9 +25,7 @@ router = APIRouter()
 
 @router.post("/generate-followup")
 async def generate_followup_api(request: Request):
-    """
-    API endpoint to generate a follow-up interview question.
-    """
+    """API endpoint to generate a follow-up interview question."""
     try:
         data = await request.json()
 

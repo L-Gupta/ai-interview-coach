@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './job-info.css';
 import { useNavigate } from 'react-router-dom';
+import Footer from '../footer/FooterComponent';
 
 function JobInfoComponent({}) {
   const [selectedRole, setSelectedRole] = useState('');
@@ -75,6 +76,7 @@ function JobInfoComponent({}) {
           {loading ? 'Processing...' : 'Start Interview'}
         </button>
       </form>
+      <Footer />
     </div>
   );
 }

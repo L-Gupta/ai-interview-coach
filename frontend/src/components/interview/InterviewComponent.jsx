@@ -19,7 +19,7 @@ function InterviewComponent() {
 
       {/* Center Column: Video + Audio */}
       <div className="interview-center">
-        <VideoComponent onTranscript={setTranscript} /> 
+        <VideoComponent onTranscript={setTranscript} resumeId={resumeId} conversationHistory={transcript} role={role} /> 
       </div>
 
       {/* Right Column: Questions */}

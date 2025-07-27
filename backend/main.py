@@ -9,6 +9,7 @@ from fileUpload.file_upload import router as file_router
 from ques_gen.router_ques_first import router as ques_router
 from ques_gen.router_ques_next import router as next_router
 from audio.audio_router import router as audio_router
+from end.end_router import router as end_router
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ app.include_router(file_router, prefix="/file")
 app.include_router(audio_router, prefix="/audio")
 app.include_router(ques_router, prefix="/question")
 app.include_router(next_router, prefix="/question")
+app.include_router(end_router)
 
 @app.get("/")
 async def root():

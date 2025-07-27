@@ -6,6 +6,7 @@ import Header from './components/header/HeaderComponent';
 import HomeComponent from './components/home/HomeComponent';
 import JobInfoComponent from './components/job-info/JobInfoComponent';
 import InterviewComponent from './components/interview/InterviewComponent';
+import SummaryComponent from './components/summary/SummaryComponent';
 
 function App() {
   const [questions, setQuestions] = useState([]);
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<HomeComponent />} />
             <Route path="/job-info" element={<JobInfoComponent setQuestions={setQuestions} />} />
             <Route path="/interview" element={<InterviewComponent questions={questions} />} />
+            <Route path="/summary" element={<SummaryComponent />} />
           </Routes>
         </main>
       </div>
