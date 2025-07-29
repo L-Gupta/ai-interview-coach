@@ -12,7 +12,7 @@ function SummaryComponent() {
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/interview/exit/${resumeId}`, {
+        const res = await fetch(`http://127.0.0.1:8000/interview/summary/${resumeId}`, {
           method: "GET",
         });
         const data = await res.json();

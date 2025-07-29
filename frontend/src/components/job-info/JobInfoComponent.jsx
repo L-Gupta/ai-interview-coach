@@ -3,7 +3,7 @@ import './job-info.css';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../footer/FooterComponent';
 
-function JobInfoComponent({}) {
+function JobInfoComponent() {
   const [selectedRole, setSelectedRole] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,6 +60,9 @@ function JobInfoComponent({}) {
             <option value="Software Engineer">Software Engineer</option>
             <option value="Data Scientist">Data Scientist</option>
             <option value="Product Manager">Product Manager</option>
+            <option value="Computer Engineer">Computer Engineer</option>
+            <option value="Mechanical Engineer">Mechanical Engineer</option>
+            <option value="Company Secretary">Company Secretary</option>
           </select>
         </div>
 

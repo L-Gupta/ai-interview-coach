@@ -1,39 +1,35 @@
-from fastapi import APIRouter, UploadFile, File
-from pydantic import BaseModel
-import shutil, os, subprocess
-from .audio_transcriber import transcribe_audio
+from fastapi import APIRouter, UploadFile, File, Form
+from fastapi.responses import JSONResponse
+from .audio_controller import run_audio_analysis, run_audio_transcribe, save_uploaded_file
 
-router = APIRouter()
+router = APIRouter(tags=["Audio"])
 
-# ✅ 1. /stt converts audio to transcript
-@router.post("/stt")
-async def speech_to_text(file: UploadFile = File(...)):
-    upload_dir = "audio/uploads"
-    os.makedirs(upload_dir, exist_ok=True)
-    webm_path = os.path.join(upload_dir, file.filename)
+@router.post("/tone-analysis")
+async def analyze_audio(file: UploadFile = File(...), resume_id:str = Form(...), question_id: str = Form(...), question:str = Form(...)):
+    try:
+        # Save the file under qXans.wav
+        file_path = save_uploaded_file(file, resume_id, f"{question_id}ans.wav")
 
-    with open(webm_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        # Call the controller with resume_id, file path and question_id
+        result = await run_audio_analysis(resume_id=resume_id, file_path=file_path, question_id=question_id)
 
-    # Convert WebM -> WAV (16kHz PCM)
-    wav_path = webm_path.replace(".webm", ".wav")
-    subprocess.run([
-        "ffmpeg", "-y", "-i", webm_path,
-        "-ar", "16000", "-ac", "1",
-        wav_path
-    ], check=True)
+        # Return the analysis results to the frontend
+        return JSONResponse(content={"question_id":question_id, "emotions": result.get("emotions", [])})
 
-    transcript = transcribe_audio(wav_path)
-    return {"transcript": transcript}
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+@router.post("/audio-transcribe")
+async def audio_transcribe(file: UploadFile = File(...), resume_id: str = Form(...), question_id: str = Form(...), question:str = Form(...)):
+    try:
+        # Save the file under qXans.wav
+        file_path = save_uploaded_file(file, resume_id, f"{question_id}ans.wav")
 
-# ✅ 2. /analyze-audio sends transcript to Gemini and returns follow-up
-class TranscriptPayload(BaseModel):
-    transcript: str
-    timestamp: str
+        # Call controller to handle transcription and saving
+        result = await run_audio_transcribe(resume_id=resume_id, question=question, file_path=str(file_path), q_id=question_id)
 
-@router.post("/analyze-audio")
-async def analyze_audio(data: TranscriptPayload):
-    print(f"🎤 Received transcript: {data.transcript}")
-    # 👉 Placeholder for Gemini call
-    next_q = "Tell me about yourself"
-    return {"next_question": next_q}
+        # Return result from controller directly
+        return JSONResponse(content=result)
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)

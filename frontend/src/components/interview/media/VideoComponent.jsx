@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../interview.css';
-import AudioComponent from './AudioComponent';
 
-function VideoComponent({ onTranscript, resumeId, conversationHistory, role}) {
+function VideoComponent({resumeId, conversationHistory, role}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [micMuted, setMicMuted] = useState(false);
@@ -46,10 +45,10 @@ function VideoComponent({ onTranscript, resumeId, conversationHistory, role}) {
     streamRef.current?.getTracks().forEach(track => track.stop());
 
     // ✅ Send resumeId,  conversation history and role to backend
-    fetch(`http://127.0.0.1:8000/interview/exit/${resumeId}`, {
+    await fetch(`http://127.0.0.1:8000/interview/exit/${resumeId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversation_history: conversationHistory, role: role }),
+      body: JSON.stringify({ role: role }),
     }).catch(err => console.error('Error finalizing interview:', err));
 
     // ✅ Navigate to summary page with resumeId
@@ -63,10 +62,6 @@ function VideoComponent({ onTranscript, resumeId, conversationHistory, role}) {
       <div className="webcam-controls">
         <button onClick={toggleMic}>{micMuted ? '🔇 Mic Off' : '🎙️ Mic On'}</button>
         <button onClick={toggleCam}>{camOff ? '📷 Cam Off' : '📷 Cam On'}</button>
-      </div>
-
-      <div className="recording-section">
-        <AudioComponent onTranscript={onTranscript} />
       </div>
 
       <button className="exit-button" onClick={handleExitInterview}>🚪 Exit Interview</button>

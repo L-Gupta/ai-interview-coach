@@ -1,9 +1,9 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import os
-import json
+import os, json
+from pathlib import Path
 
-REPORTS_DIR = "reports"
+REPORTS_DIR = Path("end/reports") 
 
 """Generate a PDF report from summary data and return its file path."""
 async def compile_pdf_report(summary_data: dict) -> str:
@@ -78,23 +78,51 @@ async def compile_pdf_report(summary_data: dict) -> str:
 
 """Save summary JSON and PDF reference to the same reports directory."""
 async def save_summary_data(resume_id: str, summary_data: dict, pdf_url: str):
-    if not os.path.exists(REPORTS_DIR):
-        os.makedirs(REPORTS_DIR)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Attach PDF URL before saving
     summary_data["pdf_url"] = pdf_url
 
-    json_path = os.path.join(REPORTS_DIR, f"{resume_id}.json")
-    with open(json_path, "w") as f:
+    safe_id = resume_id.replace(" ", "_")
+    json_path = REPORTS_DIR / resume_id /f"{safe_id}.json"
+
+    print(f"[DEBUG] Saving summary data to: {json_path}")
+    with open(json_path, "w", encoding="utf-8") as f:
         json.dump(summary_data, f, indent=4)
 
-    return json_path
+    return str(json_path)
 
 """Load summary JSON from the reports directory for the given resume_id."""
 async def load_summary_data(resume_id: str) -> dict:
-    json_path = os.path.join(REPORTS_DIR, f"{resume_id}.json")
-    if not os.path.exists(json_path):
+    safe_id = resume_id.replace(" ", "_")
+    json_path = REPORTS_DIR / resume_id /f"{safe_id}.json"
+
+    print(f"[DEBUG] Loading summary data from: {json_path}")
+    if not json_path.exists():
+        print("[DEBUG] No summary file found.")
         return None
 
-    with open(json_path, "r") as f:
+    with open(json_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+"""
+Loads the conversation history stored in the conv_history.json file in the resume_id folder
+    -resume_id: ID of the resume (used for folder name)
+"""
+async def load_conv_history(resume_id: str)->str:
+    json_path = REPORTS_DIR / resume_id / "conv_history.json"
+    if not json_path.exists():
+        return ""
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Ensure it's a dictionary {question:answer}
+    if isinstance(data, dict):
+        lines = []
+        for idx, (q, a) in enumerate(data.items(), start=1):
+            lines.append(f"question{idx}: {q}")
+            lines.append(f"answer{idx}: {a}")
+            lines.append("")  # blank line between Q&A
+        conversation = "\n".join(lines)
+        return conversation
+    return ""

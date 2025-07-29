@@ -4,7 +4,7 @@ from pathlib import Path
 from fileUpload.run_resume import run_pipeline
 from shutil import copyfile
 
-router = APIRouter()
+router = APIRouter(tags=["Resume upload"])
 
 UPLOAD_DIR = Path("fileUpload/uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -35,7 +35,7 @@ async def upload_resume(file: UploadFile = File(...)):
         json.dump({}, f)
     conv_history_path = resume_report_dir / "conv_history.json"
     with open(conv_history_path, "w", encoding="utf-8") as f:
-        json.dump([], f)
+        json.dump({}, f)
     summary_path = resume_report_dir / "summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump({}, f)

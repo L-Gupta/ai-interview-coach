@@ -3,7 +3,7 @@ import '../interview.css';
 import { generateFirstQuestion } from './ques_first';
 import { generateNextQuestion } from './ques_next';
 
-function QuestionComponent({ resumeId, role, transcript }) {
+function QuestionComponent({ resumeId, role, transcript, setCurrentQuestionId, clearTranscript, setCurrentQuestion }) {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState([]);
@@ -15,13 +15,15 @@ function QuestionComponent({ resumeId, role, transcript }) {
     const fetchFirst = async () => {
       const q = await generateFirstQuestion(resumeId, role);
       setQuestion(q);
+      setCurrentQuestionId('q1'); // first question id
       setLoading(false);
+      setCurrentQuestion(q);
     };
 
     fetchFirst();
   }, [resumeId, role]);
 
-  // Auto-fill answer when transcript updates
+  // Auto-fill answer box when transcript updates
   useEffect(() => {
     if (transcript) {
       setAnswer(transcript);
@@ -35,10 +37,17 @@ function QuestionComponent({ resumeId, role, transcript }) {
     setHistory(updatedHistory);
     setAnswer('');
 
-    // ✅ Call follow-up generation
+    // ✅ Clear transcript in parent so it doesn't carry over
+    if (clearTranscript) clearTranscript();
+
+    // Next question ID
+    const nextQuestionId = `q${updatedHistory.length + 1}`;
+    setCurrentQuestionId(nextQuestionId);
+
     setLoading(true);
-    const nextQ = await generateNextQuestion(updatedHistory, resumeId, role);
+    const nextQ = await generateNextQuestion( resumeId, role);
     setQuestion(nextQ);
+    setCurrentQuestion(nextQ)
     setLoading(false);
   };
 
@@ -59,7 +68,7 @@ function QuestionComponent({ resumeId, role, transcript }) {
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
           />
-          <button className="submit-btn" onClick={handleSubmit}>✅ Submit</button>
+          <button className="submit-btn" onClick={handleSubmit} disabled={loading}>✅ Submit</button>
         </div>
 
         {transcript && (

@@ -1,10 +1,10 @@
-export async function generateNextQuestion(history, resumeId, role) {
+export async function generateNextQuestion(resumeId, role) {
   try {
+    // Call the follow-up question generation
     const res = await fetch('http://127.0.0.1:8000/question/generate-followup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        history: history,
         resume_id: resumeId,
         role: role
       })
