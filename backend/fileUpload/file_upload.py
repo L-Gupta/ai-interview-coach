@@ -30,6 +30,9 @@ async def upload_resume(file: UploadFile = File(...)):
     os.makedirs(resume_report_dir, exist_ok=True)
 
     # ✅ Create initial JSON files
+    emotion_path = resume_report_dir / "emotion.json"
+    with open(emotion_path, "w", encoding="utf-8") as f:
+        json.dump({}, f)
     tone_path = resume_report_dir / "tone.json"
     with open(tone_path, "w", encoding="utf-8") as f:
         json.dump({}, f)

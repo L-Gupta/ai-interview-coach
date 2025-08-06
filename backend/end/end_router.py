@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Request, HTTPException
 from .end_controller import finalize_interview, get_summary
-from .models_end import SummaryResponse
+from .end_models import SummaryResponse
 
 router = APIRouter(tags=["End interview"])
 
+"""Finalizes the interview session, generates report data, and returns summary."""
 @router.post("/interview/exit/{resume_id}", response_model=SummaryResponse)
 async def exit_interview(resume_id: str, request: Request):
-    """Finalizes the interview session, generates report data, and returns summary."""
     data = await request.json()
     role = data.get("role")
     if not role:
@@ -19,7 +19,7 @@ async def exit_interview(resume_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+"""Returns the stored summary report for a given resume_id."""
 @router.get("/interview/summary/{resume_id}", response_model=SummaryResponse)
 async def get_interview_summary(resume_id: str):
-    """Returns the stored summary report for a given resume_id."""
     return await get_summary(resume_id)

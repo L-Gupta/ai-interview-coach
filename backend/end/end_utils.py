@@ -1,128 +1,147 @@
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 import os, json
 from pathlib import Path
+from datetime import datetime
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 
 REPORTS_DIR = Path("end/reports") 
 
-"""Generate a PDF report from summary data and return its file path."""
-async def compile_pdf_report(summary_data: dict) -> str:
-    if not os.path.exists(REPORTS_DIR):
-        os.makedirs(REPORTS_DIR)
-
-    file_path = os.path.join(REPORTS_DIR, f"{summary_data['resume_id']}.pdf")
-
-    c = canvas.Canvas(file_path, pagesize=letter)
-    width, height = letter
-    y = height - 50
-
-    # Title
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(200, y, "Interview Summary Report")
-    y -= 40
-
-    c.setFont("Helvetica", 12)
-    c.drawString(50, y, f"Resume ID: {summary_data['resume_id']}")
-    y -= 30
-
-    # Emotion Report
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Emotion & Tone Analysis")
-    y -= 20
-    c.setFont("Helvetica", 12)
-    emotion = summary_data.get("emotion_report", {})
-    c.drawString(60, y, f"Tone Summary: {emotion.get('tone_summary', 'N/A')}")
-    y -= 20
-    c.drawString(60, y, f"Expression Summary: {emotion.get('expression_summary', 'N/A')}")
-    y -= 40
-
-    # Experience Validation
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Experience Validation")
-    y -= 20
-    c.setFont("Helvetica", 12)
-    validation = summary_data.get("validation", {})
-    for q, result in validation.items():
-        c.drawString(60, y, f"{q}: {result}")
-        y -= 20
-        if y < 100:
-            c.showPage()
-            y = height - 50
-
-    # Job-Fit Score
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Job-Fit Score")
-    y -= 20
-    c.setFont("Helvetica", 12)
-    c.drawString(60, y, f"{summary_data.get('job_fit_score', 0)}%")
-    y -= 40
-
-    # Accuracy Scores
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Accuracy Scores")
-    y -= 20
-    c.setFont("Helvetica", 12)
-    accuracy = summary_data.get("accuracy_scores", {})
-    for q, score in accuracy.items():
-        c.drawString(60, y, f"{q}: {score}%")
-        y -= 20
-        if y < 100:
-            c.showPage()
-            y = height - 50
-
-    c.showPage()
-    c.save()
-
-    # Return path or URL depending on setup
-    return f"/{REPORTS_DIR}/{summary_data['resume_id']}.pdf"
-
-"""Save summary JSON and PDF reference to the same reports directory."""
-async def save_summary_data(resume_id: str, summary_data: dict, pdf_url: str):
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-
-    summary_data["pdf_url"] = pdf_url
-
-    safe_id = resume_id.replace(" ", "_")
-    json_path = REPORTS_DIR / resume_id /f"{safe_id}.json"
-
-    print(f"[DEBUG] Saving summary data to: {json_path}")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(summary_data, f, indent=4)
-
-    return str(json_path)
-
-"""Load summary JSON from the reports directory for the given resume_id."""
+"""Loads summary.json from disk."""
 async def load_summary_data(resume_id: str) -> dict:
-    safe_id = resume_id.replace(" ", "_")
-    json_path = REPORTS_DIR / resume_id /f"{safe_id}.json"
+    try:
+        file_path = REPORTS_DIR / resume_id / "summary.json"
+        if not file_path.exists():
+            raise FileNotFoundError("summary.json not found")
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print("[ERROR] Failed to load summary.json:", e)
+        return {}
 
-    print(f"[DEBUG] Loading summary data from: {json_path}")
-    if not json_path.exists():
-        print("[DEBUG] No summary file found.")
-        return None
+"""Loads conversation history file from disk."""
+async def load_conv_history(resume_id: str) -> str:
+    try:
+        file_path = REPORTS_DIR / resume_id / "conversation_history.json"
+        if not file_path.exists():
+            raise FileNotFoundError("conversation_history.json not found")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    with open(json_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        # Convert to plain Q&A if list of dicts
+        if isinstance(data, list):
+            return "\n\n".join([f"Q: {x['question']}\nA: {x['answer']}" for x in data])
+        elif isinstance(data, dict):
+            return "\n\n".join([f"Q: {k}\nA: {v}" for k, v in data.items()])
+        elif isinstance(data, str):
+            return data
+        else:
+            return ""
 
-"""
-Loads the conversation history stored in the conv_history.json file in the resume_id folder
-    -resume_id: ID of the resume (used for folder name)
-"""
-async def load_conv_history(resume_id: str)->str:
-    json_path = REPORTS_DIR / resume_id / "conv_history.json"
-    if not json_path.exists():
+    except Exception as e:
+        print("[ERROR] Failed to load conversation_history:", e)
         return ""
 
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+"""Writes summary dictionary to disk."""
+async def save_summary_data(resume_id: str, summary_data: dict, pdf_url: str = "") -> None:
+    try:
+        folder = REPORTS_DIR / resume_id
+        os.makedirs(folder, exist_ok=True)
 
-    # Ensure it's a dictionary {question:answer}
-    if isinstance(data, dict):
-        lines = []
-        for idx, (q, a) in enumerate(data.items(), start=1):
-            lines.append(f"question{idx}: {q}")
-            lines.append(f"answer{idx}: {a}")
-            lines.append("")  # blank line between Q&A
-        conversation = "\n".join(lines)
-        return conversation
-    return ""
+        summary_data["pdf_url"] = pdf_url
+        save_path = folder / "summary.json"
+
+        with open(save_path, "w", encoding="utf-8") as f:
+            json.dump(summary_data, f, indent=2)
+    except Exception as e:
+        print("[ERROR] Failed to save summary.json:", e)
+
+"""Compiles a PDF report from the final summary dictionary."""
+async def compile_pdf_report(summary_data: dict) -> str:
+    try:
+        resume_id = summary_data.get("resume_id")
+        save_dir = REPORTS_DIR / resume_id
+        os.makedirs(save_dir, exist_ok=True)
+        filepath = save_dir / "summary.pdf"
+
+        c = canvas.Canvas(str(filepath), pagesize=A4)
+        width, height = A4
+        y = height - 50
+
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(50, y, "AI Interview Summary Report")
+        y -= 30
+
+        c.setFont("Helvetica", 12)
+        c.drawString(50, y, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        y -= 40
+
+        # Expression & Tone Report
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(50, y, "Expression & Tone Analysis")
+        y -= 20
+        c.setFont("Helvetica", 12)
+
+        expression = summary_data.get("expression_report", {})
+        tone = summary_data.get("tone_report", {})
+
+        c.drawString(60, y, f"Tone Summary: {tone.get('tone_summary', 'N/A')}")
+        y -= 20
+        c.drawString(60, y, f"Expression Summary: {expression.get('expression_summary', 'N/A')}")
+        y -= 40
+
+        # Accuracy & Integrity
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(50, y, "Accuracy & Validation")
+        y -= 20
+        c.setFont("Helvetica", 12)
+
+        acc = summary_data.get("accuracy_scores", {})
+        c.drawString(60, y, f"Accuracy Score: {acc.get('overall', 'N/A')}%")
+        y -= 20
+        c.drawString(60, y, f"Comment: {acc.get('comment', '')}")
+        y -= 20
+
+        validation = summary_data.get("validation_summary", {})
+        c.drawString(60, y, f"Matches: {validation.get('match_count', 0)}")
+        c.drawString(200, y, f"Exaggerated: {validation.get('exaggerated_count', 0)}")
+        c.drawString(400, y, f"Vague: {validation.get('vague_count', 0)}")
+        y -= 40
+
+        # Job Fit & Soft Skills
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(50, y, "Job Fit & Soft Skills")
+        y -= 20
+        c.setFont("Helvetica", 12)
+
+        c.drawString(60, y, f"Job Fit Score: {summary_data.get('job_fit_score', 'N/A')}%")
+        y -= 20
+        c.drawString(60, y, f"Comment: {summary_data.get('job_fit_comment', '')}")
+        y -= 30
+
+        soft = summary_data.get("soft_skills", {})
+        for skill, level in soft.items():
+            c.drawString(60, y, f"{skill.title()}: {level}")
+            y -= 20
+
+        sugg = summary_data.get("suggestions", [])
+        if sugg:
+            y -= 10
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(60, y, "Suggestions:")
+            y -= 20
+            c.setFont("Helvetica", 12)
+            for s in sugg:
+                c.drawString(70, y, f"- {s}")
+                y -= 20
+
+        # Footer
+        y = 40
+        c.setFont("Helvetica-Oblique", 10)
+        c.drawString(50, y, "This report was auto-generated by the AI Interview Coach system.")
+        c.save()
+
+        return f"/end/reports/{resume_id}/summary.pdf"
+
+    except Exception as e:
+        print("[ERROR] Failed to compile PDF:", e)
+        return ""

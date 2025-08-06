@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8000"; // Use backend URL or deployed link
+const BASE_URL = "http://localhost:8000"; 
 
 // Call first question endpoint
 export async function getFirstQuestion(role, resume_id) {

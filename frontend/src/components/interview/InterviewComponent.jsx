@@ -1,29 +1,40 @@
-import React, { useState } from 'react';
-import './interview.css';
-import { useLocation } from 'react-router-dom';
+// InterviewComponent.jsx
+
+import React, { useState, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AnalysisComponent from './analysis/AnalysisComponent';
 import VideoComponent from './media/VideoComponent';
 import QuestionComponent from './questions/QuestionComponent';
 import AudioComponent from './media/AudioComponent';
+import { exitInterview } from './exit';
+import './interview.css';
 
 function InterviewComponent() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const videoRef = useRef();
   const { resumeId, role } = location.state || {};
   const [transcript, setTranscript] = useState('');
   const [currentQuestionId, setCurrentQuestionId] = useState('q1');
-  const [currentEmotions, setCurrentEmotions] = useState([])
-  const [currentQuestion, setCurrentQuestion] = useState("")
+  const [tone, setTone] = useState([]);
+  const [emotion, setEmotion] = useState([]);
+  const [currentQuestion, setCurrentQuestion] = useState("");
+
   const clearTranscript = () => setTranscript('');
 
+  const handleExit = () => {
+    videoRef.current?.stopMediaTracks();
+    exitInterview(resumeId, role, navigate);
+  };
 
   return (
     <div className="interview-3col">
       {/* Left Column: Analysis */}
       <div className="interview-left">
         <AnalysisComponent 
-          resumeId={resumeId} 
           currentQuestionId={currentQuestionId}
-          emotions={currentEmotions}
+          tone={tone}
+          emotion={emotion}
         />
       </div>
 
@@ -31,18 +42,22 @@ function InterviewComponent() {
       <div className="interview-center">
         <div className="video-audio-stack">
           <VideoComponent 
-            resumeId={resumeId} 
-            conversationHistory={transcript} 
-            role={role} 
-          />
-          <AudioComponent 
-            onTranscript={setTranscript} 
-            onEmotions={setCurrentEmotions} 
+            ref={videoRef}
+            resumeId={resumeId}
             currentQuestionId={currentQuestionId}
-            resume_id={resumeId}   
-            currentQuestion={currentQuestion} 
+            onEmotion = {setEmotion}
           />
-
+          <AudioComponent
+            onTranscript={setTranscript}
+            onTone={setTone}
+            currentQuestionId={currentQuestionId}
+            resume_id={resumeId}
+            currentQuestion={currentQuestion}
+            videoRef={videoRef}
+          />
+          <div className="exit-wrapper">
+            <button className="exit-button" onClick={handleExit}>🚪 Exit Interview</button>
+          </div>
         </div>
       </div>
 

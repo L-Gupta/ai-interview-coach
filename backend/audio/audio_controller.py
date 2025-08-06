@@ -1,7 +1,7 @@
 import os, shutil
 from pathlib import Path
 from fastapi import UploadFile
-from .audio_analysis_service import chunk_audio, predict_emotion, update_tone_json
+from .audio_analysis_service import chunk_audio, predict_tone, update_tone_json
 from .audio_transcribe_service import update_conv_history_json, transcribe_audio_file
 
 REPORTS_DIR = Path("end/reports")
@@ -10,24 +10,33 @@ REPORTS_DIR = Path("end/reports")
 Handles the tone analysis pipeline:
 1. Uses the saved audio file at file_path.
 2. Calls chunk_audio() to split into 5-sec segments.
-3. Calls predict_emotion() to classify each chunk.
-4. Updates tone.json with the detected emotions.
+3. Calls predict_tone() to classify each chunk.
+4. Updates tone.json with the detected tones.
 """
 async def run_audio_analysis(resume_id: str, file_path: str, question_id: str):
-    # Chunk audio into 5-sec pieces as a list
-    chunks = await chunk_audio(file_path, chunk_length=5)
+    try:
+        print(f"🎧 Starting tone analysis for {resume_id} - {question_id}")
+        
+        # Chunk audio into 5-sec pieces
+        chunks = await chunk_audio(file_path, chunk_length=5)
+        print(f"📦 {len(chunks)} audio chunks created.")
 
-    # Predict emotions per chunk as a list
-    emotions = await predict_emotion(chunks)
+        # Predict tone
+        tone = await predict_tone   (chunks)
+        print(f"✅ Predicted tone: {tone}")
 
-    # Save emotions to tone.json for this resume_id and question_id
-    await update_tone_json(resume_id=resume_id, question_id=question_id, emotions=emotions)
+        # Update tone.json
+        await update_tone_json(resume_id=resume_id, question_id=question_id, tone=tone)
 
-    # ✅ Return to router
-    return {
-        "question_id": question_id,
-        "emotions": emotions
-    }
+        return {
+            "question_id": question_id,
+            "tone": tone
+        }
+
+    except Exception as e:
+        print(f"❌ Error in run_audio_analysis: {e}")
+        raise  # Re-raise to surface it to the router
+
 
 """
 Handles the audio transcription pipeline:

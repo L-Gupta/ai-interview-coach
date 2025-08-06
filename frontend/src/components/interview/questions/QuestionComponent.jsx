@@ -21,7 +21,7 @@ function QuestionComponent({ resumeId, role, transcript, setCurrentQuestionId, c
     };
 
     fetchFirst();
-  }, [resumeId, role]);
+  }, [resumeId, role, setCurrentQuestionId, setCurrentQuestion]);
 
   // Auto-fill answer box when transcript updates
   useEffect(() => {

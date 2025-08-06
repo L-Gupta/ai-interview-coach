@@ -41,18 +41,18 @@ async def chunk_audio(file_path: str, chunk_length: int = 5):
         return []
 
 """
-Predict emotions for each audio chunk.
+Predict tone for each audio chunk.
 
 Args:
     chunks (list): List of NumPy arrays representing audio chunks.
     sr (int): Sample rate for feature extraction (default 16kHz).
 
 Returns:
-    list: A list of predicted emotion strings, one per chunk.
+    list: A list of predicted tone strings, one per chunk.
 """
-async def predict_emotion(chunks, sr: int = 16000):
-    #Initiates the list of emotions
-    emotions = []
+async def predict_tone(chunks, sr: int = 16000):
+    #Initiates the list of tone
+    all_tone = []
 
     for idx, chunk in enumerate(chunks):
         try:
@@ -71,26 +71,26 @@ async def predict_emotion(chunks, sr: int = 16000):
 
             # ✅ 4. Combine thresholds (tuned)
             if energy > 55 and pitch > 200 and centroid > 2500:
-                emotion = "Excited"
+                predicted_tone = "Excited"
             elif energy > 40 and pitch > 150:
-                emotion = "Happy"
+                predicted_tone = "Happy"
             elif variance < 15 and centroid < 1800 and bandwidth < 2000:
-                emotion = "Calm"
+                predicted_tone = "Calm"
             elif energy < 25 and pitch < 100:
-                emotion = "Sad"
+                predicted_tone = "Sad"
             else:
-                emotion = "Neutral"
+                predicted_tone = "Neutral"
 
-            emotions.append(emotion)
+            all_tone.append(predicted_tone)
 
         except Exception as e:
-            print(f"❌ Error predicting emotion for chunk {idx}: {e}")
-            emotions.append("Neutral")
+            print(f"❌ Error predicting tone for chunk {idx}: {e}")
+            all_tone.append("Neutral")
 
-    return emotions
+    return all_tone
 
 """
-Updates tone.json for a given resume_id with emotions for a specific question.
+Updates tone.json for a given resume_id with tones for a specific question.
 
 JSON structure:
 {
@@ -98,7 +98,7 @@ JSON structure:
     "q2": ["Neutral", "Excited"]
 }
 """
-async def update_tone_json(resume_id: str, question_id: str, emotions: list):
+async def update_tone_json(resume_id: str, question_id: str, tone: list):
     resume_dir = REPORTS_DIR / resume_id
     resume_dir.mkdir(parents=True, exist_ok=True)
 
@@ -114,8 +114,8 @@ async def update_tone_json(resume_id: str, question_id: str, emotions: list):
     else:
         tone_data = {}
 
-    # ✅ Update or add the new emotions for the question_id
-    tone_data[question_id] = emotions
+    # ✅ Update or add the new tone for the question_id
+    tone_data[question_id] = tone
 
     # ✅ Save updated JSON back to file
     with open(tone_file, "w", encoding="utf-8") as f:

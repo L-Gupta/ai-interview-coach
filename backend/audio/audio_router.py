@@ -14,7 +14,7 @@ async def analyze_audio(file: UploadFile = File(...), resume_id:str = Form(...),
         result = await run_audio_analysis(resume_id=resume_id, file_path=file_path, question_id=question_id)
 
         # Return the analysis results to the frontend
-        return JSONResponse(content={"question_id":question_id, "emotions": result.get("emotions", [])})
+        return JSONResponse(content={"question_id":question_id, "tone": result.get("tone", [])})
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)

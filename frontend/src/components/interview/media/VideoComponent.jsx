@@ -1,13 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, {
+  useEffect, useRef, useState,
+  forwardRef, useImperativeHandle
+} from 'react';
+import RecordRTC from 'recordrtc';
 import '../interview.css';
 
-function VideoComponent({resumeId, conversationHistory, role}) {
+const VideoComponent = forwardRef(({ resumeId, currentQuestionId, onEmotion }, ref) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+
   const [micMuted, setMicMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     async function startMedia() {
@@ -20,6 +23,10 @@ function VideoComponent({resumeId, conversationHistory, role}) {
       }
     }
     startMedia();
+
+    return () => {
+      streamRef.current?.getTracks().forEach(track => track.stop());
+    };
   }, []);
 
   const toggleMic = () => {
@@ -38,35 +45,65 @@ function VideoComponent({resumeId, conversationHistory, role}) {
     }
   };
 
-  const handleExitInterview = async () => {
-    if (!window.confirm("Are you sure you want to end the interview?")) return;
+  const uploadVideo = async (blob) => {
+    const formData = new FormData();
+    formData.append("resume_id", resumeId);
+    formData.append("question_id", currentQuestionId || "q1");
+    formData.append("video", blob, "response.webm");
 
-    // Stop camera and mic
-    streamRef.current?.getTracks().forEach(track => track.stop());
+    try {
+      const uploadRes = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    // ✅ Send resumeId,  conversation history and role to backend
-    await fetch(`http://127.0.0.1:8000/interview/exit/${resumeId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: role }),
-    }).catch(err => console.error('Error finalizing interview:', err));
+      const uploadData = await uploadRes.json();
+      console.log("📤 Upload response:", uploadData)
 
-    // ✅ Navigate to summary page with resumeId
-    navigate('/summary', { state: { resumeId } });
+      if (!uploadRes.ok) {
+        throw new Error("Upload failed: " + (uploadData?.error || "Unknown error"));
+      }
+
+      const analyzeRes = await fetch("http://127.0.0.1:8000/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const analyzeData = await analyzeRes.json();
+      console.log("🎞️ Video analysis response:", analyzeData);
+
+      if (analyzeData.emotions && analyzeData.emotions.length > 0) {
+        onEmotion?.(analyzeData.emotions);
+      }
+
+    } catch (err) {
+      console.error("❌ Video upload/analyze error:", err);
+    }
   };
+
+  useImperativeHandle(ref, () => ({getVideoBlob: async () => {
+    const recorder = new RecordRTC(streamRef.current, { type: 'video' });
+    recorder.startRecording();
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    await recorder.stopRecording();
+    const blob = recorder.getBlob();
+    await uploadVideo(blob);
+    return blob;
+  },
+  stopMediaTracks: () => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+  }
+}));
 
   return (
     <div className="interview-center">
       <video ref={videoRef} autoPlay muted playsInline className="webcam-preview" />
-      
       <div className="webcam-controls">
         <button onClick={toggleMic}>{micMuted ? '🔇 Mic Off' : '🎙️ Mic On'}</button>
         <button onClick={toggleCam}>{camOff ? '📷 Cam Off' : '📷 Cam On'}</button>
       </div>
-
-      <button className="exit-button" onClick={handleExitInterview}>🚪 Exit Interview</button>
     </div>
   );
-}
+});
 
 export default VideoComponent;
