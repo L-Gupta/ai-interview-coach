@@ -21,7 +21,7 @@ async def load_summary_data(resume_id: str) -> dict:
 """Loads conversation history file from disk."""
 async def load_conv_history(resume_id: str) -> str:
     try:
-        file_path = REPORTS_DIR / resume_id / "conversation_history.json"
+        file_path = REPORTS_DIR / resume_id / "conv_history.json"
         if not file_path.exists():
             raise FileNotFoundError("conversation_history.json not found")
         with open(file_path, "r", encoding="utf-8") as f:

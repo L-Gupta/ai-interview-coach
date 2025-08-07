@@ -8,7 +8,7 @@ router = APIRouter(tags=["Video"])
 
 REPORTS_DIR = Path("end/reports")
 
-@router.post("/upload")
+@router.post("/video-upload")
 async def upload_video(resume_id = Form(...), question_id: str = Form(...), video: UploadFile = File(...)):
     try:
         # ✅ Ensure folder exists
@@ -26,7 +26,7 @@ async def upload_video(resume_id = Form(...), question_id: str = Form(...), vide
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@router.post("/analyze")
+@router.post("/video-analyze")
 async def analyze_video(resume_id: str = Form(...), question_id: str = Form(...)):
     try:
         result = await analyze_video_for_question(resume_id, question_id)

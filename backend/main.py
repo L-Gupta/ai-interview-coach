@@ -29,7 +29,7 @@ app.include_router(file_router, prefix="/file")
 app.include_router(audio_router)
 app.include_router(question_router, prefix="/question")
 app.include_router(end_router)
-app.include_router(video_router, prefix="/video")
+app.include_router(video_router)
 
 @app.get("/")
 async def root():

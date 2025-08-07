@@ -17,6 +17,7 @@ function SummaryComponent() {
         });
         const data = await res.json();
         setSummaryData(data);
+        console.log("📦 Summary data loaded:", data);
       } catch (err) {
         console.error("Error fetching summary:", err);
       } finally {
@@ -28,10 +29,14 @@ function SummaryComponent() {
 
   if (!resumeId) return <div className="summary-container">No resume ID provided</div>;
   if (loading) return <div className="summary-container">Loading summary...</div>;
+  if (!summaryData) return <div className="summary-container">No summary available</div>;
 
   const expression = summaryData.expression_report || {};
   const tone = summaryData.tone_report || {};
   const integrity = summaryData.integrity || {};
+  const pdfUrl = summaryData.pdf_url?.startsWith("/")
+    ? summaryData.pdf_url
+    : `/end/reports/${resumeId}/summary.pdf`;
 
   return (
     <div className="summary-container">
@@ -86,12 +91,20 @@ function SummaryComponent() {
         </ul>
       </div>
 
-      {/* 6️⃣ PDF Link */}
-      {summaryData.pdf_url && (
-        <a className="download-btn" href={summaryData.pdf_url} target="_blank" rel="noopener noreferrer">
-          📄 Download Full PDF Report
-        </a>
-      )}
+      {/* 6️⃣ PDF + Return Buttons */}
+      <div style={{ marginTop: "30px", textAlign: "center" }}>
+        {pdfUrl && (
+          <a className="download-btn" href={pdfUrl} target="_blank" rel="noopener noreferrer">
+            📄 Download Full PDF Report
+          </a>
+        )}
+        <button
+          className="return-home-btn"
+          onClick={() => window.location.href = "/"}
+        >
+          🏠 Return to Home
+        </button>
+      </div>
     </div>
   );
 }

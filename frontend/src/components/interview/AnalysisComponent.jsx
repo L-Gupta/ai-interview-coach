@@ -1,5 +1,5 @@
 import React from 'react';
-import './../interview.css';
+import './interview.css';
 
 function AnalysisComponent({ currentQuestionId, tone = [], emotion = [] }) {
   const isEmpty = tone.length === 0 && emotion.length === 0;

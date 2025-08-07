@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import '../interview.css';
 import { generateFirstQuestion } from './ques_first';
 import { generateNextQuestion } from './ques_next';
+import './interview.css';
 
 function QuestionComponent({ resumeId, role, transcript, setCurrentQuestionId, clearTranscript, setCurrentQuestion }) {
   const [question, setQuestion] = useState('');

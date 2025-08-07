@@ -1,3 +1,26 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;   /* ✅ Enable vertical scrolling */
+}
+
+.return-home-btn {
+  display: inline-block;
+  margin-top: 20px;
+  margin-left: 10px;
+  padding: 10px 16px;
+  background: #28a745;
+  color: #fff;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.return-home-btn:hover {
+  background: #1e7e34;
+}
+
 .summary-container {
   max-width: 700px;
   margin: 40px auto;

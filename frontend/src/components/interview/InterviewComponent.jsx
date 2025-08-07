@@ -1,11 +1,8 @@
-// InterviewComponent.jsx
-
 import React, { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AnalysisComponent from './analysis/AnalysisComponent';
-import VideoComponent from './media/VideoComponent';
-import QuestionComponent from './questions/QuestionComponent';
-import AudioComponent from './media/AudioComponent';
+import AnalysisComponent from './AnalysisComponent';
+import QuestionComponent from './QuestionComponent';
+import AVComponent from './AVComponent';
 import { exitInterview } from './exit';
 import './interview.css';
 
@@ -14,6 +11,7 @@ function InterviewComponent() {
   const navigate = useNavigate();
   const videoRef = useRef();
   const { resumeId, role } = location.state || {};
+
   const [transcript, setTranscript] = useState('');
   const [currentQuestionId, setCurrentQuestionId] = useState('q1');
   const [tone, setTone] = useState([]);
@@ -38,22 +36,17 @@ function InterviewComponent() {
         />
       </div>
 
-      {/* Center Column: Video + Audio */}
+      {/* Center Column: AV Recording */}
       <div className="interview-center">
         <div className="video-audio-stack">
-          <VideoComponent 
+          <AVComponent
             ref={videoRef}
-            resumeId={resumeId}
-            currentQuestionId={currentQuestionId}
-            onEmotion = {setEmotion}
-          />
-          <AudioComponent
             onTranscript={setTranscript}
             onTone={setTone}
-            currentQuestionId={currentQuestionId}
+            onEmotion={setEmotion}
             resume_id={resumeId}
+            currentQuestionId={currentQuestionId}
             currentQuestion={currentQuestion}
-            videoRef={videoRef}
           />
           <div className="exit-wrapper">
             <button className="exit-button" onClick={handleExit}>🚪 Exit Interview</button>

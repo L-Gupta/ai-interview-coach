@@ -93,14 +93,25 @@ async def gen_expression_report(resume_id: str) -> dict:
         )
 
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        text = response.content.strip().strip("`")
-        if "\n" in text:
-            text = "\n".join(text.split("\n")[1:])
-        parsed = json.loads(text)
-        expression_summary = parsed.get("expression_summary", "")
+        text = response.content.strip()
+
+        # Remove triple backticks and markdown formatting
+        if text.startswith("```"):
+            text = text.strip("`")
+            if "\n" in text:
+                text = "\n".join(text.split("\n")[1:])
+
+        try:
+            parsed = json.loads(text)
+            expression_summary = parsed.get("expression_summary", "No summary provided.")
+        except Exception as parse_err:
+            print(f"[ERROR] JSON parsing failed: {parse_err}")
+            expression_summary = "Facial expression analysis unavailable due to parsing error."
+
 
     except Exception as e:
         print("[ERROR] Failed to generate expression report:", e)
+        emotion_data = {}
         dominant_emotions = ["neutral"]
         avg_eye_contact = 50
         total_distractions = 2
@@ -115,8 +126,9 @@ async def gen_expression_report(resume_id: str) -> dict:
         "total_distractions": total_distractions,
         "total_face_absence": total_face_absence,
         "multi_person_flag": multi_person_flag,
-        "raw_data": emotion_data if 'emotion_data' in locals() else {}
+        "raw_data": emotion_data
     }
+
 
 """Compile tone dictionaries into a summary via Gemini."""
 """
@@ -155,12 +167,10 @@ async def gen_tone_report(resume_id: str) -> dict:
                 "raw_data": {}
             }
 
-        # Load tone data
         with open(tone_file, "r", encoding="utf-8") as f:
             tone_dict = json.load(f)
         print(f"[DEBUG] Loaded tone data: {tone_dict}")
 
-        # Pre-calculate dominant tones
         try:
             dominant_tones = {q: Counter(vals).most_common(1)[0][0] for q, vals in tone_dict.items()}
             all_tones = [emo for vals in tone_dict.values() for emo in vals]
@@ -171,7 +181,6 @@ async def gen_tone_report(resume_id: str) -> dict:
             dominant_tones = {}
             overall_dominant = "Neutral"
 
-        # Build Gemini prompt
         prompt = TONE_PROMPT.format(
             tone_dict=json.dumps(tone_dict),
             expression_dict="{}"
@@ -188,16 +197,24 @@ async def gen_tone_report(resume_id: str) -> dict:
                 if "\n" in text:
                     text = "\n".join(text.split("\n")[1:])
 
-            tone_report = json.loads(text)
-            print(f"[DEBUG] Parsed Gemini tone report: {tone_report}")
+            try:
+                tone_report = json.loads(text)
+            except Exception as parse_err:
+                print(f"[ERROR] JSON parsing failed: {parse_err}")
+                tone_report = {
+                    "tone_summary": f"Overall dominant tone: {overall_dominant}",
+                    "dominant_tones_per_question": dominant_tones
+                }
         except Exception as e:
             print(f"[ERROR] Gemini call or parsing failed: {e}")
-            tone_report = {
-                "tone_summary": f"Overall dominant tone: {overall_dominant}",
-                "dominant_tones_per_question": dominant_tones
-            }
+            tone_report = {}
 
-        # Include raw data
+        # Ensure required keys are present
+        if "tone_summary" not in tone_report:
+            tone_report["tone_summary"] = f"Overall dominant tone: {overall_dominant}"
+        if "dominant_tones_per_question" not in tone_report:
+            tone_report["dominant_tones_per_question"] = dominant_tones
+
         tone_report["raw_data"] = tone_dict
         print(f"[DEBUG] Final tone report: {tone_report}")
         return tone_report
@@ -209,6 +226,7 @@ async def gen_tone_report(resume_id: str) -> dict:
             "dominant_tones_per_question": {},
             "raw_data": {}
         }
+
  
 """Generates soft skill insights and improvement suggestions using Gemini."""
 """
