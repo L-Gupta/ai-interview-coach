@@ -1,49 +1,76 @@
 .job-info-container {
   max-width: 500px;
-  margin: 40px auto;
-  padding: 24px;
+  margin: 3rem auto;
+  padding: 2rem;
   border-radius: 12px;
-  background-color: #f9f9f9;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  background-color: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  font-family: 'Segoe UI', sans-serif;
 }
 
 .job-info-container h2 {
   text-align: center;
-  font-size: 1.5rem;
-  margin-bottom: 24px;
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
   color: #222;
 }
 
 .input-group {
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem;
 }
 
 .input-group label {
   display: block;
   font-weight: 600;
-  margin-bottom: 8px;
-  color: #333;
+  margin-bottom: 0.5rem;
+  color: #444;
 }
 
-.input-group select,
-.input-group input[type="file"] {
+.input-group input[type="text"],
+.input-group select {
   width: 100%;
   padding: 12px;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  transition: border 0.2s ease;
+  transition: border-color 0.2s ease;
+  background-color: #fafafa;
 }
 
-.input-group select:focus,
-.input-group input[type="file"]:focus {
+.input-group input[type="text"]:focus,
+.input-group select:focus {
   border-color: #007bff;
   outline: none;
 }
 
-.file-name {
-  margin-top: 8px;
-  font-size: 0.9rem;
-  color: #555;
+.input-group input[type="file"] {
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  background: #fafafa;
+  border: 1px solid #ccc;
+}
+
+button[type="submit"] {
+  display: block;
+  margin: 2rem auto 0;
+  padding: 12px 24px;
+  font-size: 1rem;
+  background-color: #007bff;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+  transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+  background-color: #0056b3;
+}
+
+button[type="submit"]:disabled {
+  background-color: #999;
+  cursor: not-allowed;
 }

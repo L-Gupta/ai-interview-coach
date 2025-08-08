@@ -9,16 +9,14 @@ Expression Data (per question):
 {expression_dict}
 
 Your task:
-- Summarize the candidate's overall tone and emotional state.
-- Summarize their facial expressions and engagement style.
+- Summarize the candidate's overall tone state.
 - Use the provided data only, do not invent information.
-- Return ONLY a valid JSON object. Do not include any extra text, commentary, or code fences.
+- Return ONLY a valid JSON object as shown. Do not include any extra text, commentary, or code fences.
 
 Expected JSON format:
-{
+{{
   "tone_summary": "Calm and confident",
-  "expression_summary": "Positive and engaging"
-}
+}}
 """
 
 EXPRESSION_PROMPT = """
@@ -32,14 +30,12 @@ Here is the extracted data:
 - Was Another Person Detected: {multi_person_flag}
 
 Your task:
-- Write a short 2–3 line summary of the candidate's **facial expression behavior**
+- Write a short 1 line summary of the candidate's **facial expression behavior**
 - Focus on their engagement, focus level, and any distraction cues
-- Do NOT mention tone or audio-based behavior
-
-Return ONLY a valid JSON object:
-{
-  "expression_summary": "..."
-}
+- Return ONLY a valid JSON object as shown:
+{{
+  "expression_summary": "Excited but worried"
+}}
 """
 
 VALIDATION_PROMPT = """
@@ -58,7 +54,7 @@ Your task:
 - Return ONLY a valid JSON object. Do not include any extra text, commentary, or code fences.
 
 Expected JSON format:
-{ "validation": "Match" }
+{{ "validation": "Match" }}
 """
 
 JOB_FIT_PROMPT = """
@@ -92,11 +88,12 @@ Here are the Q&A pairs:
 2. Write a one-line comment justifying the score.
 
 Return only a valid JSON object like this:
-{
+{{
   "overall": 83,
   "comment": "Mostly accurate answers with minor factual gaps."
-}
+}}
 """
+
 
 SOFT_SKILL_PROMPT = """
 You are generating a final soft skill analysis and improvement suggestions based on a candidate's interview.
@@ -119,16 +116,16 @@ Your task:
 2. Suggest 2-3 **specific improvements** they can work on to perform better in interviews.
 
 Return ONLY a valid JSON object:
-{
-  "soft_skills": {
+{{
+  "soft_skills": {{
     "communication": "strong | moderate | weak",
     "confidence": "strong | moderate | weak",
     "empathy": "strong | moderate | weak"
-  },
+  }},
   "suggestions": [
     "...",
     "...",
     "..."
   ]
-}
+}}
 """

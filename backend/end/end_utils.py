@@ -67,75 +67,67 @@ async def compile_pdf_report(summary_data: dict) -> str:
         width, height = A4
         y = height - 50
 
-        c.setFont("Helvetica-Bold", 18)
-        c.drawString(50, y, "AI Interview Summary Report")
-        y -= 30
+        def draw_heading(text, size=16, offset=30):
+            nonlocal y
+            c.setFont("Helvetica-Bold", size)
+            c.drawString(50, y, text)
+            y -= offset
 
-        c.setFont("Helvetica", 12)
-        c.drawString(50, y, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        y -= 40
+        def draw_text(label, value, size=12, indent=10, line_gap=20):
+            nonlocal y
+            c.setFont("Helvetica-Bold", size)
+            c.drawString(50 + indent, y, f"{label}:")
+            c.setFont("Helvetica", size)
+            c.drawString(130 + indent, y, str(value))
+            y -= line_gap
 
-        # Expression & Tone Report
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(50, y, "Expression & Tone Analysis")
-        y -= 20
-        c.setFont("Helvetica", 12)
+        def draw_multiline_text(label, lines, size=12, indent=10, line_gap=16):
+            nonlocal y
+            c.setFont("Helvetica-Bold", size)
+            c.drawString(50 + indent, y, f"{label}:")
+            y -= line_gap
+            c.setFont("Helvetica", size)
+            for line in lines:
+                c.drawString(70 + indent, y, f"- {line}")
+                y -= line_gap
 
-        expression = summary_data.get("expression_report", {})
-        tone = summary_data.get("tone_report", {})
+        # Title
+        draw_heading("AI Interview Summary Report", size=18, offset=30)
+        draw_text("Generated on", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
-        c.drawString(60, y, f"Tone Summary: {tone.get('tone_summary', 'N/A')}")
-        y -= 20
-        c.drawString(60, y, f"Expression Summary: {expression.get('expression_summary', 'N/A')}")
-        y -= 40
+        # --- Section 1: Expression & Tone
+        draw_heading("Expression & Tone Analysis")
+        draw_text("Tone Summary", summary_data["tone_report"].get("tone_summary", "N/A"))
+        draw_text("Expression Summary", summary_data["expression_report"].get("expression_summary", "N/A"))
 
-        # Accuracy & Integrity
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(50, y, "Accuracy & Validation")
-        y -= 20
-        c.setFont("Helvetica", 12)
+        # --- Section 2: Accuracy & Validation
+        draw_heading("Accuracy & Validation")
+        acc = summary_data["accuracy_scores"]
+        draw_text("Accuracy Score", f"{acc.get('overall', 'N/A')}%")
+        draw_text("Comment", acc.get("comment", ""))
 
-        acc = summary_data.get("accuracy_scores", {})
-        c.drawString(60, y, f"Accuracy Score: {acc.get('overall', 'N/A')}%")
-        y -= 20
-        c.drawString(60, y, f"Comment: {acc.get('comment', '')}")
-        y -= 20
+        val = summary_data["validation_summary"]
+        draw_text("Matches", val.get("match_count", 0), indent=20)
+        draw_text("Exaggerated", val.get("exaggerated_count", 0), indent=20)
+        draw_text("Vague", val.get("vague_count", 0), indent=20)
 
-        validation = summary_data.get("validation_summary", {})
-        c.drawString(60, y, f"Matches: {validation.get('match_count', 0)}")
-        c.drawString(200, y, f"Exaggerated: {validation.get('exaggerated_count', 0)}")
-        c.drawString(400, y, f"Vague: {validation.get('vague_count', 0)}")
-        y -= 40
-
-        # Job Fit & Soft Skills
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(50, y, "Job Fit & Soft Skills")
-        y -= 20
-        c.setFont("Helvetica", 12)
-
-        c.drawString(60, y, f"Job Fit Score: {summary_data.get('job_fit_score', 'N/A')}%")
-        y -= 20
-        c.drawString(60, y, f"Comment: {summary_data.get('job_fit_comment', '')}")
-        y -= 30
+        # --- Section 3: Job Fit & Soft Skills
+        draw_heading("Job Fit & Soft Skills")
+        draw_text("Job Fit Score", f"{summary_data.get('job_fit_score', 'N/A')}%")
+        draw_text("Comment", summary_data.get("job_fit_comment", ""))
 
         soft = summary_data.get("soft_skills", {})
         for skill, level in soft.items():
-            c.drawString(60, y, f"{skill.title()}: {level}")
-            y -= 20
+            draw_text(skill.capitalize(), level, indent=10)
 
-        sugg = summary_data.get("suggestions", [])
-        if sugg:
-            y -= 10
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(60, y, "Suggestions:")
-            y -= 20
-            c.setFont("Helvetica", 12)
-            for s in sugg:
-                c.drawString(70, y, f"- {s}")
-                y -= 20
+        # --- Section 4: Suggestions
+        suggestions = summary_data.get("suggestions", [])
+        if suggestions:
+            draw_heading("Suggestions")
+            draw_multiline_text("Tips", suggestions)
 
         # Footer
-        y = 40
+        y = 50
         c.setFont("Helvetica-Oblique", 10)
         c.drawString(50, y, "This report was auto-generated by the AI Interview Coach system.")
         c.save()

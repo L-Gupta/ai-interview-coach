@@ -1,13 +1,11 @@
 import json, os, requests
 from pathlib import Path
-import wave
 from dotenv import load_dotenv
 from pathlib import Path
 
-REPORTS_DIR = Path("end/reports")
-DEEPGRAM_API_KEY=os.getenv('DEEPGRAM_API_KEY')
-
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
+DEEPGRAM_API_KEY=os.getenv('DEEPGRAM_API_KEY')
+REPORTS_DIR = Path("end/reports")
 
 """Transcriber given audio file into a text file and returns the transcription."""
 async def transcribe_audio_file(file_path:str):
@@ -63,7 +61,7 @@ async def update_conv_history_json(resume_id:str, question:str, transcript:str, 
         conv_data = {}
 
     # ✅ Update or add transcript for this question
-    conv_data[f"Q{q_id} + {question}"] = transcript
+    conv_data[f"{q_id} + {question}"] = transcript
 
     # ✅ Save back to file
     with open(conv_file, "w", encoding="utf-8") as f:

@@ -10,11 +10,9 @@ node_modules/
 # macOS
 .DS_Store
 
-# google creds
-backend/google-credentials.json
-
 # App-specific (sensitive or dynamic)
 backend/end/input.wav
 backend/end/reports/
 backend/fileUpload/uploads/
 backend/audio/recordings/
+backend/data/

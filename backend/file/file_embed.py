@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-UPLOAD_DIR = os.path.join("fileUpload", "uploads")
+UPLOAD_DIR = os.path.join("file", "uploads")
 
 GEMINI_EMBEDDING_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent"

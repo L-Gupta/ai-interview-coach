@@ -3,7 +3,7 @@ from collections import Counter
 import cv2, json
 from pathlib import Path
 
-REPORTS_DIR = Path("end/reports")
+REPORTS_DIR = Path("data")
 
 # Load the model globally to avoid reloading per frame
 _emotion_detector = FER(mtcnn=True)

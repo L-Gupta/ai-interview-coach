@@ -5,7 +5,7 @@ import requests
 import os
 from dotenv import load_dotenv
 
-from fileUpload.file_upload import router as file_router
+from file.file_router import router as file_router
 from ques_gen.question_router import router as question_router
 from audio.audio_router import router as audio_router
 from end.end_router import router as end_router

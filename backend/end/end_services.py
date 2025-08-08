@@ -38,7 +38,7 @@ index = pc.Index(INDEX_NAME)
 #Fixed directory
 REPORTS_DIR = Path("end/reports")
 
-"""Parses emotion.json and compiles a facial expression summary via Gemini."""
+"""Parses emotion.json and compiles a facial expression summary."""
 """
 Args:
     resume_id (str): Unique ID of the resume folder where emotion.json is stored.
@@ -63,9 +63,14 @@ Behavior:
 async def gen_expression_report(resume_id: str) -> dict:
     emotion_path = REPORTS_DIR / resume_id / "emotion.json"
 
-    if not emotion_path.exists():
+    # Opens and reads file, returns mock data if error
+    try:
+        with open(emotion_path, "r", encoding="utf-8") as f:
+            emotion_data = json.load(f)
+    except Exception as file_err:
+        print("[ERROR] Failed to parse emotion.json:", file_err)
         return {
-            "expression_summary": "No facial expression data found.",
+            "expression_summary": "Could not parse emotion data.",
             "dominant_emotions": ["neutral"],
             "average_eye_contact": 50,
             "total_distractions": 2,
@@ -74,50 +79,44 @@ async def gen_expression_report(resume_id: str) -> dict:
             "raw_data": {}
         }
 
-    try:
-        with open(emotion_path, "r", encoding="utf-8") as f:
-            emotion_data = json.load(f)
+    # Metrics
+    dominant_emotions = get_dominant_expression(emotion_data)
+    avg_eye_contact = calculate_average_eye_contact(emotion_data)
+    total_distractions = calculate_total_distractions(emotion_data)
+    total_face_absence = calculate_total_face_absence(emotion_data)
+    multi_person_flag = check_multi_person_flag(emotion_data)
 
-        dominant_emotions = get_dominant_expression(emotion_data)
-        avg_eye_contact = calculate_average_eye_contact(emotion_data)
-        total_distractions = calculate_total_distractions(emotion_data)
-        total_face_absence = calculate_total_face_absence(emotion_data)
-        multi_person_flag = check_multi_person_flag(emotion_data)
+    # Generate human-readable summary based on rules
+    summary = []
 
-        prompt = EXPRESSION_PROMPT.format(
-            dominant_emotions=dominant_emotions,
-            avg_eye_contact=avg_eye_contact,
-            total_distractions=total_distractions,
-            total_face_absence=total_face_absence,
-            multi_person_flag=multi_person_flag
-        )
+    if "happy" in dominant_emotions:
+        summary.append("Candidate frequently appeared happy.")
+    elif "neutral" in dominant_emotions:
+        summary.append("Candidate maintained a neutral expression.")
+    else:
+        summary.append("Candidate showed varied facial expressions.")
 
-        response = await llm.ainvoke([HumanMessage(content=prompt)])
-        text = response.content.strip()
+    if avg_eye_contact > 80:
+        summary.append("Maintained strong eye contact.")
+    elif avg_eye_contact > 50:
+        summary.append("Maintained moderate eye contact.")
+    else:
+        summary.append("Eye contact was inconsistent.")
 
-        # Remove triple backticks and markdown formatting
-        if text.startswith("```"):
-            text = text.strip("`")
-            if "\n" in text:
-                text = "\n".join(text.split("\n")[1:])
+    if total_distractions > 5:
+        summary.append("Appeared distracted multiple times.")
+    elif total_distractions > 0:
+        summary.append("Minor signs of distraction were detected.")
+    else:
+        summary.append("No distractions detected.")
 
-        try:
-            parsed = json.loads(text)
-            expression_summary = parsed.get("expression_summary", "No summary provided.")
-        except Exception as parse_err:
-            print(f"[ERROR] JSON parsing failed: {parse_err}")
-            expression_summary = "Facial expression analysis unavailable due to parsing error."
+    if total_face_absence > 0:
+        summary.append("Facial visibility was lost occasionally.")
 
+    if multi_person_flag:
+        summary.append("Presence of multiple people was detected.")
 
-    except Exception as e:
-        print("[ERROR] Failed to generate expression report:", e)
-        emotion_data = {}
-        dominant_emotions = ["neutral"]
-        avg_eye_contact = 50
-        total_distractions = 2
-        total_face_absence = 1
-        multi_person_flag = False
-        expression_summary = "Facial expression analysis unavailable due to error."
+    expression_summary = " ".join(summary)
 
     return {
         "expression_summary": expression_summary,
@@ -128,7 +127,6 @@ async def gen_expression_report(resume_id: str) -> dict:
         "multi_person_flag": multi_person_flag,
         "raw_data": emotion_data
     }
-
 
 """Compile tone dictionaries into a summary via Gemini."""
 """
@@ -154,80 +152,63 @@ Behavior:
     - Falls back to a simple dominant-tone summary if Gemini parsing fails.
 """
 async def gen_tone_report(resume_id: str) -> dict:
-    try:
-        print(f"[DEBUG] Generating tone report for resume_id: {resume_id}")
-        tone_file = REPORTS_DIR / resume_id / "tone.json"
-        print(f"[DEBUG] Looking for tone file: {tone_file}")
+    tone_file = REPORTS_DIR / resume_id / "tone.json"
 
-        if not tone_file.exists():
-            print("[DEBUG] tone.json not found, returning empty report.")
-            return {
-                "tone_summary": "No tone data found",
-                "dominant_tones_per_question": {},
-                "raw_data": {}
-            }
-
-        with open(tone_file, "r", encoding="utf-8") as f:
-            tone_dict = json.load(f)
-        print(f"[DEBUG] Loaded tone data: {tone_dict}")
-
-        try:
-            dominant_tones = {q: Counter(vals).most_common(1)[0][0] for q, vals in tone_dict.items()}
-            all_tones = [emo for vals in tone_dict.values() for emo in vals]
-            overall_dominant = Counter(all_tones).most_common(1)[0][0] if all_tones else "Neutral"
-            print(f"[DEBUG] Dominant tones: {dominant_tones}, Overall: {overall_dominant}")
-        except Exception as e:
-            print(f"[ERROR] Failed to calculate dominant tones: {e}")
-            dominant_tones = {}
-            overall_dominant = "Neutral"
-
-        prompt = TONE_PROMPT.format(
-            tone_dict=json.dumps(tone_dict),
-            expression_dict="{}"
-        )
-        print(f"[DEBUG] Gemini prompt built: {prompt}")
-
-        try:
-            response = await llm.ainvoke([HumanMessage(content=prompt)])
-            text = response.content.strip()
-            print(f"[DEBUG] Gemini raw response: {text}")
-
-            if text.startswith("```"):
-                text = text.strip("`")
-                if "\n" in text:
-                    text = "\n".join(text.split("\n")[1:])
-
-            try:
-                tone_report = json.loads(text)
-            except Exception as parse_err:
-                print(f"[ERROR] JSON parsing failed: {parse_err}")
-                tone_report = {
-                    "tone_summary": f"Overall dominant tone: {overall_dominant}",
-                    "dominant_tones_per_question": dominant_tones
-                }
-        except Exception as e:
-            print(f"[ERROR] Gemini call or parsing failed: {e}")
-            tone_report = {}
-
-        # Ensure required keys are present
-        if "tone_summary" not in tone_report:
-            tone_report["tone_summary"] = f"Overall dominant tone: {overall_dominant}"
-        if "dominant_tones_per_question" not in tone_report:
-            tone_report["dominant_tones_per_question"] = dominant_tones
-
-        tone_report["raw_data"] = tone_dict
-        print(f"[DEBUG] Final tone report: {tone_report}")
-        return tone_report
-
-    except Exception as e:
-        print(f"[CRITICAL] gen_tone_report crashed: {e}")
+    if not tone_file.exists():
         return {
-            "tone_summary": "Error generating tone report",
+            "tone_summary": "No tone data found.",
             "dominant_tones_per_question": {},
             "raw_data": {}
         }
 
- 
+    try:
+        with open(tone_file, "r", encoding="utf-8") as f:
+            tone_dict = json.load(f)
+    except Exception as file_err:
+        print("[ERROR] Failed to parse tone.json:", file_err)
+        return {
+            "tone_summary": "Could not parse tone data.",
+            "dominant_tones_per_question": {},
+            "raw_data": {}
+        }
+
+    try:
+        dominant_tones = {
+            q: Counter(vals).most_common(1)[0][0]
+            for q, vals in tone_dict.items() if vals
+        }
+        all_tones = [tone for vals in tone_dict.values() for tone in vals]
+        overall_dominant = (
+            Counter(all_tones).most_common(1)[0][0] if all_tones else "Neutral"
+        )
+
+        summary = []
+        if overall_dominant.lower() in ["confident", "enthusiastic", "happy"]:
+            summary.append(f"The candidate expressed a generally {overall_dominant.lower()} tone.")
+        elif overall_dominant.lower() == "neutral":
+            summary.append("The overall tone remained neutral throughout the interview.")
+        else:
+            summary.append(f"The tone varied, with a slight leaning towards {overall_dominant.lower()}.")
+
+        if "nervous" in all_tones:
+            summary.append("Some nervousness was also detected.")
+
+        tone_summary = " ".join(summary)
+
+        return {
+            "tone_summary": tone_summary,
+            "dominant_tones_per_question": dominant_tones,
+            "raw_data": tone_dict
+        }
+
+    except Exception as e:
+        print(f"[CRITICAL] gen_tone_report crashed: {e}")
+        return {
+            "tone_summary": "Error generating tone report.",
+            "dominant_tones_per_question": {},
+            "raw_data": {}
+        }
+
 """Generates soft skill insights and improvement suggestions using Gemini."""
 """
 Args:
@@ -256,6 +237,7 @@ async def gen_soft_skills_and_suggestions(summary_dict):
     )
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
+        print("[DEBUG] Gemini soft skills response:", response.content)
         text = response.content.strip().strip("`")
         if "\n" in text:
             text = "\n".join(text.split("\n")[1:])
@@ -273,6 +255,97 @@ async def gen_soft_skills_and_suggestions(summary_dict):
 
     return insights
 
+"""Uses candidate answers, role, and Pinecone chunks to generate a job-fit score (0-100)."""
+""""
+Args:
+    resume_id (str): Unique ID of the resume folder.
+    role (str): Job role the candidate is applying for.
+    conversation_history (str): Conversation history as a formatted string with Q/A pairs.
+
+Returns:
+    job_fit_score (int): Job fit score between 0 and 100 based on Gemini's analysis.
+"""
+async def calc_job_fit(resume_id: str, role: str, conversation_history: str) -> dict:
+    blocks = conversation_history.strip().split("\n\n")
+    answers = []
+    for block in blocks:
+        for line in block.split("\n"):
+            if line.lower().startswith("a:"):
+                answers.append(line.split(":", 1)[1].strip())
+
+    all_chunks = []
+    for ans in answers:
+        chunks = await get_relevant_chunks(resume_id=resume_id, answer=ans, top_k=3)
+        all_chunks.extend(chunks)
+
+    unique_chunks = list(set(all_chunks))
+    context_text = "\n".join([f"- {chunk}" for chunk in unique_chunks])
+    answers_text = "\n".join([f"- {ans}" for ans in answers])
+
+    prompt = JOB_FIT_PROMPT.format(role=role, answers=answers_text, context=context_text)
+    response = await llm.ainvoke([HumanMessage(content=prompt)])
+    print("[DEBUG] Gemini job fit response:", response.content)
+
+    try:
+        text = response.content.strip()
+        if text.startswith("```"):
+            text = text.strip("`")
+            if "\n" in text:
+                text = "\n".join(text.split("\n")[1:])
+        parsed = json.loads(text)
+        job_fit_score = int(parsed.get("score", 75))
+        job_fit_comment = parsed.get("comment", "No comment provided.")
+    except Exception:
+        import re
+        numbers = re.findall(r"\d+", response.content)
+        job_fit_score = int(numbers[0]) if numbers else 75
+        job_fit_comment = "Could not parse Gemini response."
+
+    return {
+        "score": job_fit_score,
+        "comment": job_fit_comment
+    }
+
+"""Passes conversation history to Gemini and gets answer accuracy scores (1-100)."""
+""""
+Args:
+    conversation_history (str): Conversation history as a formatted string with Q/A pairs.
+
+Returns: 
+    accuracy_score (dict): {Overall  : Accuracy scores as returned by Gemini.}
+"""
+async def calc_acc(conversation_history: str) -> dict:
+    if not conversation_history:
+        return {
+            "overall": 0,
+            "comment": "No conversation history found."
+        }
+
+    prompt = ACCURACY_PROMPT.format(qa_pairs=conversation_history)
+
+    try:
+        response = await llm.ainvoke([HumanMessage(content=prompt)])
+        print("[DEBUG] Gemini accuracy response:", response.content)
+        text = response.content.strip()
+
+        if text.startswith("```"):
+            text = text.strip("`")
+            if "\n" in text:
+                text = "\n".join(text.split("\n")[1:])
+
+        accuracy_scores = json.loads(text)
+
+    except Exception as e:
+        print("Gemini parsing error:", e)
+        print("Raw response text:", response.content)
+        accuracy_scores = {
+            "overall": 75,
+            "comment": "Default fallback: Gemini failed to parse."
+        }
+
+    return accuracy_scores
+
+
 """Compares each answer with relevant resume chunks to detect exaggerations or mismatches."""
 """
 Args:
@@ -283,8 +356,8 @@ Returns:
     results (dict) : {Question IDs (q1, q2, ...) : Gemini's validation result for each answer ("Match", "Exaggerated")}
 """
 async def validate_exp(resume_id: str, conversation_history: str) -> dict:  
-    results = {}                 # Initiating the empty dictionary to store the question number and its respective gemini response
-    blocks = conversation_history.strip().split("\n\n") # Cleaning the conversation history
+    results = {}
+    blocks = conversation_history.strip().split("\n\n")
     for idx, block in enumerate(blocks, start=1):
         q_key = f"q{idx}"
         lines = block.split("\n")
@@ -298,6 +371,7 @@ async def validate_exp(resume_id: str, conversation_history: str) -> dict:
 
         prompt = VALIDATION_PROMPT.format(answer=answer, chunk=chunk)
         response = await llm.ainvoke([HumanMessage(content=prompt)])
+        print(f"[DEBUG] Gemini validation response for {q_key}:", response.content)
 
         try:
             text = response.content.strip()
@@ -348,94 +422,6 @@ async def summarize_validation(validation_dict):
             summary["vague_count"] += 1  # fallback
 
     return summary  
-
-"""Uses candidate answers, role, and Pinecone chunks to generate a job-fit score (0-100)."""
-""""
-Args:
-    resume_id (str): Unique ID of the resume folder.
-    role (str): Job role the candidate is applying for.
-    conversation_history (str): Conversation history as a formatted string with Q/A pairs.
-
-Returns:
-    job_fit_score (int): Job fit score between 0 and 100 based on Gemini's analysis.
-"""
-async def calc_job_fit(resume_id: str, role: str, conversation_history: str) -> dict:
-    blocks = conversation_history.strip().split("\n\n")
-    answers = []
-    for block in blocks:
-        for line in block.split("\n"):
-            if line.lower().startswith("a:"):
-                answers.append(line.split(":", 1)[1].strip())
-
-    all_chunks = []
-    for ans in answers:
-        chunks = await get_relevant_chunks(resume_id=resume_id, answer=ans, top_k=3)
-        all_chunks.extend(chunks)
-
-    unique_chunks = list(set(all_chunks))
-    context_text = "\n".join([f"- {chunk}" for chunk in unique_chunks])
-    answers_text = "\n".join([f"- {ans}" for ans in answers])
-
-    prompt = JOB_FIT_PROMPT.format(role=role, answers=answers_text, context=context_text)
-    response = await llm.ainvoke([HumanMessage(content=prompt)])
-
-    try:
-        text = response.content.strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            if "\n" in text:
-                text = "\n".join(text.split("\n")[1:])
-        parsed = json.loads(text)
-        job_fit_score = int(parsed.get("score", 75))
-        job_fit_comment = parsed.get("comment", "No comment provided.")
-    except Exception:
-        import re
-        numbers = re.findall(r"\d+", response.content)
-        job_fit_score = int(numbers[0]) if numbers else 75
-        job_fit_comment = "Could not parse Gemini response."
-
-    return {
-        "score": job_fit_score,
-        "comment": job_fit_comment
-    }
-
-"""Passes conversation history to Gemini and gets answer accuracy scores (1-100)."""
-""""
-Args:
-    conversation_history (str): Conversation history as a formatted string with Q/A pairs.
-
-Returns: 
-    accuracy_score (dict): {Overall  : Accuracy scores as returned by Gemini.}
-"""
-async def calc_acc(conversation_history: str) -> dict:
-    if not conversation_history:
-        return {
-            "overall": 0,
-            "comment": "No conversation history found."
-        }
-
-    prompt = ACCURACY_PROMPT.format(qa_pairs=conversation_history)
-
-    try:
-        response = await llm.ainvoke([HumanMessage(content=prompt)])
-        text = response.content.strip()
-
-        if text.startswith("```"):
-            text = text.strip("`")
-            if "\n" in text:
-                text = "\n".join(text.split("\n")[1:])
-
-        accuracy_scores = json.loads(text)
-
-    except Exception as e:
-        print("Gemini parsing error:", e)
-        print("Raw response text:", response.content)
-        accuracy_scores = {
-            "overall": 75,
-            "comment": "Default fallback: Gemini failed to parse."
-        }
-
-    return accuracy_scores
 
 
 #Helper functions used in interview_controller.py
@@ -517,7 +503,7 @@ def normalize_history(conversation_history):
 def get_dominant_expression(emotion_data: dict) -> list:
     all_emotions = []
 
-    for question, data in emotion_data.items():
+    for data in emotion_data.values():
         all_emotions.extend(data.get("emotions", []))
 
     emotion_counts = Counter(all_emotions)

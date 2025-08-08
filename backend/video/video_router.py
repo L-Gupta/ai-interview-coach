@@ -6,13 +6,11 @@ from video.video_controller import analyze_video_for_question
 
 router = APIRouter(tags=["Video"])
 
-REPORTS_DIR = Path("end/reports")
-
 @router.post("/video-upload")
 async def upload_video(resume_id = Form(...), question_id: str = Form(...), video: UploadFile = File(...)):
     try:
         # ✅ Ensure folder exists
-        user_dir = REPORTS_DIR / resume_id
+        user_dir = Path("data" / resume_id)
         user_dir.mkdir(parents=True, exist_ok=True)
 
         # ✅ Save video file

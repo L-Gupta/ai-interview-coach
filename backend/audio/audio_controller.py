@@ -66,7 +66,7 @@ async def run_audio_transcribe(resume_id: str, question: str, file_path: str, q_
 
 """Helper function to save audio files. Used in audio _router.py"""
 def save_uploaded_file(file: UploadFile, resume_id: str, filename: str) -> str:
-    user_dir = REPORTS_DIR / resume_id
+    user_dir = Path("data"/resume_id)
     user_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = user_dir / filename

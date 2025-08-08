@@ -6,21 +6,32 @@ import Footer from '../footer/FooterComponent';
 function JobInfoComponent() {
   const [selectedRole, setSelectedRole] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Function to sanitize name for use as resume_id
+  const generateResumeId = (name) => {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')          // replace spaces with underscores
+      .replace(/[^a-z_]/g, '');      // remove numbers and symbols
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedRole || !resumeFile) {
-      alert("Please select a role and upload your resume.");
+    if (!selectedRole || !resumeFile || !name.trim()) {
+      alert("Please enter your name, select a role, and upload your resume.");
       return;
     }
 
     setLoading(true);
     try {
-      // ✅ 1. Upload resume
+      const resumeId = generateResumeId(name);
       const formData = new FormData();
       formData.append('file', resumeFile);
+      formData.append('resume_id', resumeId); // send name with underscores as resume_id
 
       const uploadRes = await fetch('http://127.0.0.1:8000/file/upload-resume', {
         method: 'POST',
@@ -28,18 +39,15 @@ function JobInfoComponent() {
       });
 
       if (!uploadRes.ok) throw new Error('Resume upload failed');
-      const uploadData = await uploadRes.json();
-      const resumeId = uploadData.resume_id;
-      console.log("✅ Resume uploaded, ID:", resumeId);
+      console.log("✅ Resume uploaded with ID:", resumeId);
 
-      // ✅ 2. Navigate to interview with state
       navigate('/interview', {
         state: {
+          name: name.trim(),
           role: selectedRole,
           resumeId: resumeId
         }
       });
-
 
     } catch (error) {
       alert('Error starting interview. Check console.');
@@ -51,8 +59,18 @@ function JobInfoComponent() {
 
   return (
     <div className="job-info-container">
-      <h2>Step 1: Choose Role & Upload Resume</h2>
+      <h2>Please enter your name, choose your role and upload your resume</h2>
       <form onSubmit={handleSubmit}>
+        <div className="input-group">
+          <label>Enter Your Name:</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. John Doe"
+          />
+        </div>
+
         <div className="input-group">
           <label>Select Job Role:</label>
           <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>

@@ -4,7 +4,7 @@ from video.frame_utils import extract_frames
 from video.analyze_emotions import get_emotion, aggregate_emotions, save_emotion_json
 from video.video_utils import estimate_eye_contact, detect_multiple_faces, detect_face_absence, count_distractions
 
-REPORTS_DIR = Path("end/reports")
+REPORTS_DIR = Path("data")
 
 """Runs emotion analysis for a single question's video and returns dominant emotions."""
 """

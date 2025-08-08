@@ -1,29 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { generateFirstQuestion } from './ques_first';
 import { generateNextQuestion } from './ques_next';
+import { useLocation } from 'react-router-dom';
 import './interview.css';
 
-function QuestionComponent({ resumeId, role, transcript, setCurrentQuestionId, clearTranscript, setCurrentQuestion }) {
+const speakQuestion = async (text) => {
+  try {
+    const response = await fetch("https://api.deepgram.com/v1/speak", {
+      method: "POST",
+      headers: {
+        "Authorization": `Token ${process.env.REACT_APP_DEEPGRAM_API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg" // ✅ Force Deepgram to return audio
+      },
+      body: JSON.stringify({
+        text: text,
+        model: "aura-asteria-en"
+      }),
+    });
+
+    const blob = await response.blob();
+    console.log("🔊 Deepgram blob type:", blob.type);
+
+    // ✅ If response is not audio, print the actual error message
+    if (!blob.type.startsWith("audio/")) {
+      const errorText = await blob.text();
+      console.error("❌ Invalid audio blob response from Deepgram:", errorText);
+      return;
+    }
+
+    const audio = new Audio(URL.createObjectURL(blob));
+    audio.play();
+
+  } catch (err) {
+    console.error("🔇 TTS playback failed:", err);
+  }
+};
+
+
+
+function QuestionComponent({ transcript, setCurrentQuestionId, clearTranscript, setCurrentQuestion }) {
+  const location = useLocation();
+  const { name, resumeId, role } = location.state || {};
+
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState([]);
   const [answer, setAnswer] = useState('');
 
   useEffect(() => {
-    if (!resumeId || !role) return;
+    if (!name) return;
 
-    const fetchFirst = async () => {
-      const q = await generateFirstQuestion(resumeId, role);
-      setQuestion(q);
-      setCurrentQuestionId('q1'); // first question id
-      setLoading(false);
-      setCurrentQuestion(q);
-    };
+    const first = generateFirstQuestion(name);
+    setQuestion(first);
+    setCurrentQuestionId('q1');
+    setLoading(false);
+    setCurrentQuestion(first);
+    speakQuestion(first);
+  }, [name, setCurrentQuestionId, setCurrentQuestion]);
 
-    fetchFirst();
-  }, [resumeId, role, setCurrentQuestionId, setCurrentQuestion]);
-
-  // Auto-fill answer box when transcript updates
   useEffect(() => {
     if (transcript) {
       setAnswer(transcript);
@@ -37,17 +72,16 @@ function QuestionComponent({ resumeId, role, transcript, setCurrentQuestionId, c
     setHistory(updatedHistory);
     setAnswer('');
 
-    // ✅ Clear transcript in parent so it doesn't carry over
     if (clearTranscript) clearTranscript();
 
-    // Next question ID
     const nextQuestionId = `q${updatedHistory.length + 1}`;
     setCurrentQuestionId(nextQuestionId);
 
     setLoading(true);
-    const nextQ = await generateNextQuestion( resumeId, role);
+    const nextQ = await generateNextQuestion(resumeId, role);
     setQuestion(nextQ);
-    setCurrentQuestion(nextQ)
+    setCurrentQuestion(nextQ);
+    speakQuestion(nextQ)
     setLoading(false);
   };
 

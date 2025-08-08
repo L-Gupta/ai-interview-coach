@@ -3,7 +3,7 @@ from typing import Optional
 import fitz  # PyMuPDF
 from docx import Document
 
-UPLOAD_DIR = os.path.join("fileUpload","uploads")
+UPLOAD_DIR = os.path.join("file","uploads")
 
 def parse_pdf(filepath: str) -> str:
     try:
@@ -30,9 +30,9 @@ def parse_resume(filename: str) -> Optional[str]:
         print(f"❌ File not found: {file_path}")
         return None
 
-    if filename.endswith(".pdf"):
+    if filename.lower().endswith(".pdf"):
         return parse_pdf(file_path)
-    elif filename.endswith(".docx"):
+    elif filename.lower().endswith(".docx"):
         return parse_docx(file_path)
     else:
         print("❌ Unsupported file type.")

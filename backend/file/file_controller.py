@@ -1,15 +1,9 @@
-#imports
-import os
-from fileUpload.file_parse import parse_resume, save_parsed_text_to_file
-from fileUpload.file_chunk import chunk_text_by_paragraph, save_chunks_to_file
-from fileUpload.file_embed import load_chunks_from_file, embed_chunks
-from fileUpload.file_pinecone import upsert_embeddings
+from file.file_parse import parse_resume, save_parsed_text_to_file
+from file.file_chunk import chunk_text_by_paragraph, save_chunks_to_file
+from file.file_embed import embed_chunks, load_chunks_from_file
+from file.file_pinecone import upsert_embeddings
 
-# setting variables
-UPLOAD_DIR = "uploads"
-FILENAME = "sample_resume.pdf" 
-
-def run_pipeline(filename: str):
+def run_pipeline(filename: str, resume_id: str):
     print(f"📂 Running pipeline for: {filename}")
 
     # Step 1: Parse
@@ -32,14 +26,9 @@ def run_pipeline(filename: str):
         raise RuntimeError("Embedding failed.")
 
     # Step 4: Pinecone Upsert
-    upsert_embeddings(embeddings, original_filename=filename)
+    upsert_embeddings(embeddings, resume_id=resume_id)
 
     return {
         "chunks": len(chunks),
-        "resume_id": filename.replace(".pdf", "").replace(".docx", "")
+        "resume_id": resume_id
     }
-
-if __name__ == "__main__":
-    from file_upload import upload_resume_from_local
-    result = upload_resume_from_local("C:/Users/lakshya3012/Downloads/sample_resume.pdf")
-    print(result)

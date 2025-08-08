@@ -17,12 +17,15 @@ function InterviewComponent() {
   const [tone, setTone] = useState([]);
   const [emotion, setEmotion] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState("");
+  const [interviewEnd, setInterviewEnd] = useState(false);
 
   const clearTranscript = () => setTranscript('');
 
-  const handleExit = () => {
+  const handleExit = async () => {
+    alert("✅ Thank you for your time. Our team will get back to you shortly.");
     videoRef.current?.stopMediaTracks();
-    exitInterview(resumeId, role, navigate);
+    setInterviewEnd(true);
+    await exitInterview(resumeId, role, navigate);
   };
 
   return (
@@ -49,7 +52,15 @@ function InterviewComponent() {
             currentQuestion={currentQuestion}
           />
           <div className="exit-wrapper">
-            <button className="exit-button" onClick={handleExit}>🚪 Exit Interview</button>
+            {!interviewEnd ? (
+              <button className="exit-button" onClick={handleExit}>
+                🚪 Exit Interview
+              </button>
+            ) : (
+              <button className="exit-button" disabled>
+                ⏳ Analyzing Results...
+              </button>
+            )}
           </div>
         </div>
       </div>

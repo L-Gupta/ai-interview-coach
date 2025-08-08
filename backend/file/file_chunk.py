@@ -1,7 +1,7 @@
 import os
 import re
 
-UPLOAD_DIR = os.path.join("fileUpload", "uploads")
+UPLOAD_DIR = os.path.join("file", "uploads")
 
 def chunk_text_by_paragraph(text: str, max_chars: int = 1250) -> list[str]:
     # Normalize and split into blocks

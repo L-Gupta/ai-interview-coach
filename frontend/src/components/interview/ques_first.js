@@ -1,16 +1,12 @@
-export async function generateFirstQuestion(resumeId, role) {
-  try {
-    const res = await fetch('http://127.0.0.1:8000/question/generate-first-question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resume_id: resumeId, role: role })
-    });
+const introPrompts = [
+  (name) => `Good morning ${name}, how are you doing today? Can you tell me a little about yourself?`,
+  (name) => `Hi ${name}, let's begin with a quick introduction. Tell me about yourself.`,
+  (name) => `Welcome ${name}. Let's start off with a quick introduction about yourself.`,
+  (name) => `Hey ${name}, could you walk me through your background and interests?`,
+  (name) => `Hello ${name}! Why don't you kick things off by telling me a bit about yourself?`
+];
 
-    if (!res.ok) throw new Error('Failed to generate question');
-    const data = await res.json();
-    return data.question || 'No question generated.';
-  } catch (err) {
-    console.error('Error generating first question:', err);
-    return 'Error generating question.';
-  }
+export function generateFirstQuestion(name) {
+  const index = Math.floor(Math.random() * introPrompts.length);
+  return introPrompts[index](name.trim());
 }

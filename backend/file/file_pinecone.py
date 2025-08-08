@@ -10,16 +10,13 @@ INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(INDEX_NAME)
 
-def upsert_embeddings(embedding_results: list[dict], original_filename: str):
-    """
-    Upserts embedded resume chunks into Pinecone using the filename (without extension)
-    as the namespace. Each item must have 'chunk_id', 'embedding', and 'text'.
-    """
+"""
+Upserts embedded resume chunks into Pinecone using the filename (without extension)as the namespace. 
+Each item must have 'chunk_id', 'embedding', and 'text'.
+"""
+def upsert_embeddings(embedding_results: list[dict], resume_id: str):
     if INDEX_NAME not in pc.list_indexes().names():
         raise ValueError(f"Index '{INDEX_NAME}' does not exist.")
-
-    namespace = os.path.splitext(original_filename)[0]
-    resume_id = namespace
 
     vectors = []
     for item in embedding_results:
@@ -36,5 +33,5 @@ def upsert_embeddings(embedding_results: list[dict], original_filename: str):
             }
         })
 
-    index.upsert(vectors=vectors, namespace=namespace)
-    print(f"✅ {len(vectors)} embeddings upserted to Pinecone (namespace: {namespace})")
+    index.upsert(vectors=vectors, namespace=resume_id)
+    print(f"✅ {len(vectors)} embeddings upserted to Pinecone (namespace: {resume_id})")
