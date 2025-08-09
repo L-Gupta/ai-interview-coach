@@ -296,3 +296,29 @@ html, body {
 .answer-box button {
   padding: 0.5rem 1rem;
 }
+
+.question-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.repeat-btn {
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f1f3f5;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
+}
+
+.repeat-btn:hover {
+  background: #e9ecef;
+}
+
+.repeat-btn:active {
+  transform: translateY(1px);
+}

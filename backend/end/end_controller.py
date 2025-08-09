@@ -139,7 +139,6 @@ async def finalize_interview(resume_id: str, role: str) -> SummaryResponse:
         # ---- Final summary object (keys match SummaryResponse model)
         summary_data = {
             "resume_id": resume_id,
-
             "expression_report": {
                 "expression_summary": expression_report.get("expression_summary", ""),
                 "dominant_emotions": expression_report.get("dominant_emotions", []),
@@ -155,25 +154,21 @@ async def finalize_interview(resume_id: str, role: str) -> SummaryResponse:
                 "raw_data": tone_report.get("raw_data", {})
             },
 
-            # If the model expects 'validation' (not 'validation_summary')
-            "validation": validation_summary,
+            # Ensure 'validation' and 'validation_summary' are set
+            "validation": validation_summary if validation_summary else {},  # Use empty dict if missing
+            "validation_summary": validation_summary if validation_summary else {},  # Ensure this is set too
 
-            # If the model expects only the score, extract it:
             "job_fit_score": job_fit.get("score", 0),
-            # Provide comment separately (compile_pdf_report reads this)
             "job_fit_comment": job_fit.get("comment", ""),
-
-            # Suggestions array (model-required)
             "suggestions": suggestions_list,
-
-            # Additional details used by PDF generator
             "accuracy_scores": accuracy_scores,
             "soft_skills": soft_skills_map,
-
+            "integrity": integrity if integrity else {},  # Default to empty dict if not populated
             "pdf_url": ""
         }
 
         # ---- PDF & save (safe)
+        pdf_url = ""
         try:
             # pass resume_id so the util can place file correctly even if summary_data is incomplete
             pdf_url = await compile_pdf_report(summary_data)

@@ -5,14 +5,11 @@ import { generateNextQuestion } from './ques_next';
 import { useLocation } from 'react-router-dom';
 import './interview.css';
 
-const BACKEND_BASE = "http://127.0.0.1:8000"; // hardcoded per your request
+const BACKEND_BASE = "http://127.0.0.1:8000";
 
-// 🔊 Singleton audio so questions don't overlap
 let currentAudio = null;
-
 const speakQuestion = async (text) => {
   try {
-    // Stop any previous playback
     if (currentAudio) {
       try { currentAudio.pause(); } catch {}
       try { currentAudio.src = ""; } catch {}
@@ -32,16 +29,12 @@ const speakQuestion = async (text) => {
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-
     const audio = new Audio();
     audio.preload = "auto";
     audio.playsInline = true;
     audio.src = url;
     currentAudio = audio;
-
-    // When called inside a click handler (Submit / Start), autoplay policies allow this
     await audio.play();
-
     audio.onended = () => {
       URL.revokeObjectURL(url);
       if (currentAudio === audio) currentAudio = null;
@@ -68,15 +61,12 @@ function QuestionComponent({
   const [answer, setAnswer] = useState('');
   const [isEnding, setIsEnding] = useState(false);
 
-  // Total questions allowed (intro + follow-ups)
   const MAX_QUESTIONS = 6;
 
-  // Keep input synced with latest mic transcript
   useEffect(() => {
     if (transcript) setAnswer(transcript);
   }, [transcript]);
 
-  // Start interview on click (prevents autoplay block for the very first question)
   const startInterview = async () => {
     if (hasStarted || !name) return;
     const first = generateFirstQuestion(name);
@@ -85,8 +75,6 @@ function QuestionComponent({
     setQuestion(first);
     setCurrentQuestionId('q1');
     setCurrentQuestion(first);
-
-    // Speak the first question within the same user gesture
     await speakQuestion(first);
   };
 
@@ -97,52 +85,46 @@ function QuestionComponent({
     setHistory(updatedHistory);
     setAnswer('');
     clearTranscript?.();
-
-    // Next human-friendly index after this submission
     const nextCount = updatedHistory.length + 1;
 
-    // If we've already asked & answered MAX_QUESTIONS, now we do the goodbye
     if (nextCount > MAX_QUESTIONS) {
+      // Always use a fixed farewell string
       const bye = generateLastQuestion(name);
       setQuestion(bye);
       setCurrentQuestionId('end');
       setCurrentQuestion(bye);
       setIsEnding(true);
-
-      // 🔊 Speak farewell as part of the click chain
       await speakQuestion(bye);
-
-      // Optional: auto-exit after a short delay
       setTimeout(() => onReadyToExit?.(), 3500);
       return;
     }
 
-    // Otherwise fetch the next question
     setLoading(true);
     const nextQ = await generateNextQuestion(resumeId, role);
     setQuestion(nextQ);
     setCurrentQuestion(nextQ);
     setCurrentQuestionId(`q${nextCount}`);
     setLoading(false);
-
-    // 🔊 Speak the next question immediately after submit (still user-initiated)
     await speakQuestion(nextQ);
   };
 
-  // Live counter: answered so far + currently shown
   const questionCount = history.length + (question ? 1 : 0);
 
   return (
     <div className="question-panel">
       <div className="question-header">
-        <h2>{hasStarted ? `Interview Question ${questionCount}` : 'Ready to start?'}</h2>
+        <h2>
+          {hasStarted
+            ? (isEnding ? 'Wrapping up' : `Interview Question ${questionCount}`)
+            : 'Ready to start?'}
+        </h2>
         {hasStarted && question && !isEnding && (
           <button
-            className="play-btn"
+            className="repeat-btn"
             onClick={() => speakQuestion(question)}
-            title="Play question audio"
+            title="Repeat question audio"
           >
-            🔊 Play
+            ⟲ Repeat
           </button>
         )}
       </div>
@@ -158,28 +140,31 @@ function QuestionComponent({
         <div className="question-card">
           {loading ? (
             <p>Loading question...</p>
+          ) : isEnding ? (
+            <p>{question}</p> // No "Q:" prefix for farewell
           ) : (
             <p><strong>Q:</strong> {question}</p>
           )}
 
-          <div className="answer-box">
-            <input
-              type="text"
-              placeholder="Type your answer or use audio"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              disabled={isEnding}
-            />
-            <button
-              className="submit-btn"
-              onClick={handleSubmit}
-              disabled={loading || isEnding}
-            >
-              {isEnding ? 'Finishing…' : '✅ Submit'}
-            </button>
-          </div>
+          {!isEnding && (
+            <div className="answer-box">
+              <input
+                type="text"
+                placeholder="Type your answer or use audio"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+              />
+              <button
+                className="submit-btn"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                ✅ Submit
+              </button>
+            </div>
+          )}
 
-          {transcript && (
+          {transcript && !isEnding && (
             <div className="transcript-box">
               <h4>📝 Transcript:</h4>
               <p>{transcript}</p>
