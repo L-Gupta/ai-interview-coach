@@ -7,16 +7,20 @@ load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(INDEX_NAME)
-
 """
 Upserts embedded resume chunks into Pinecone using the filename (without extension)as the namespace. 
 Each item must have 'chunk_id', 'embedding', and 'text'.
 """
 def upsert_embeddings(embedding_results: list[dict], resume_id: str):
+    if not PINECONE_API_KEY:
+        raise RuntimeError("Missing: PINECONE_API_KEY")
+    if not INDEX_NAME:
+        raise RuntimeError("Missing INDEX_NAME")
+
+    pc = Pinecone(api_key=PINECONE_API_KEY)
     if INDEX_NAME not in pc.list_indexes().names():
         raise ValueError(f"Index '{INDEX_NAME}' does not exist.")
+    index = pc.Index(INDEX_NAME)
 
     vectors = []
     for item in embedding_results:

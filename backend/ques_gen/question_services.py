@@ -11,10 +11,17 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 REPORTS_DIR = Path("end/reports")
 
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(INDEX_NAME)
-
 GEMINI_EMBED_URL = ("https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent"f"?key={GEMINI_API_KEY}")
+
+def _get_index():
+    if not PINECONE_API_KEY:
+        raise RuntimeError("Missing PINECONE_API_KEY")
+    if not INDEX_NAME:
+        raise RuntimeError("Missing PINECONE_INDEX_NAME")
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    if INDEX_NAME not in pc.list_indexes().names():
+        raise ValueError(f"Index '{INDEX_NAME}' does not exist")
+    return pc.Index(INDEX_NAME)
 
 """Takes the job role as an input, and returns it as a list of vectors to be able to query the Pinecone vector DB"""
 def embed_text(text: str) -> list[float]:
@@ -27,7 +34,7 @@ def embed_text(text: str) -> list[float]:
 """Fetches relevant chunks from Pincone vector DB using the vector-embedded role"""
 def fetch_resume_chunks(namespace: str, role: str, top_k: int = 3) -> dict:
     query_vector = embed_text(role)
-
+    index = _get_index()
     response = index.query(
         namespace=namespace,
         top_k=top_k,

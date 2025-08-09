@@ -5,16 +5,17 @@ from .audio_controller import run_audio_analysis, run_audio_transcribe, save_upl
 router = APIRouter(tags=["Audio"])
 
 @router.post("/tone-analysis")
-async def analyze_audio(file: UploadFile = File(...), resume_id:str = Form(...), question_id: str = Form(...), question:str = Form(...)):
+async def analyze_audio(file: UploadFile = File(...), resume_id:str = Form(...), question_id: str = Form(...)):
     try:
         # Save the file under qXans.wav
         file_path = save_uploaded_file(file, resume_id, f"{question_id}ans.wav")
 
         # Call the controller with resume_id, file path and question_id
         result = await run_audio_analysis(resume_id=resume_id, file_path=file_path, question_id=question_id)
+        tones = result.get("tone", [])
 
         # Return the analysis results to the frontend
-        return JSONResponse(content={"question_id":question_id, "tone": result.get("tone", [])})
+        return JSONResponse(content={question_id:tones})
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)

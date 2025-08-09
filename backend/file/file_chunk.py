@@ -23,7 +23,12 @@ def chunk_text_by_paragraph(text: str, max_chars: int = 1250) -> list[str]:
         # Detect section headers (e.g. ALL CAPS or keyword-based)
         is_section_header = (
             re.match(r"^[A-Z][A-Z\s]+$", line) or
-            line.lower() in {"experience", "projects", "education", "skills", "certifications", "leadership positions"}
+            line.lower() in {
+                "summary", "objective", "experience", "work experience", "projects",
+                "education", "skills", "certifications", "awards", "achievements",
+                "publications", "volunteer", "activities", "leadership positions",
+                "languages", "interests"
+            }
         )
 
         # If current chunk is too long, flush it

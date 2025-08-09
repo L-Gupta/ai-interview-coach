@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from file.file_router import router as file_router
 from ques_gen.question_router import router as question_router
 from audio.audio_router import router as audio_router
+from audio.tts_router import router as tts_router
 from end.end_router import router as end_router
 from video.video_router import router as video_router
 
@@ -27,6 +28,7 @@ app.add_middleware(
 # Interview route
 app.include_router(file_router, prefix="/file")
 app.include_router(audio_router)
+app.include_router(tts_router)
 app.include_router(question_router, prefix="/question")
 app.include_router(end_router)
 app.include_router(video_router)

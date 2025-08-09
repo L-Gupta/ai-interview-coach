@@ -1,117 +1,192 @@
+// QuestionComponent.jsx
 import React, { useState, useEffect } from 'react';
-import { generateFirstQuestion } from './ques_first';
+import { generateFirstQuestion, generateLastQuestion } from './ques_first_and_last';
 import { generateNextQuestion } from './ques_next';
 import { useLocation } from 'react-router-dom';
 import './interview.css';
 
+const BACKEND_BASE = "http://127.0.0.1:8000"; // hardcoded per your request
+
+// 🔊 Singleton audio so questions don't overlap
+let currentAudio = null;
+
 const speakQuestion = async (text) => {
   try {
-    const response = await fetch("https://api.deepgram.com/v1/speak", {
+    // Stop any previous playback
+    if (currentAudio) {
+      try { currentAudio.pause(); } catch {}
+      try { currentAudio.src = ""; } catch {}
+      currentAudio = null;
+    }
+
+    const res = await fetch(`${BACKEND_BASE}/tts`, {
       method: "POST",
-      headers: {
-        "Authorization": `Token ${process.env.REACT_APP_DEEPGRAM_API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "audio/mpeg" // ✅ Force Deepgram to return audio
-      },
-      body: JSON.stringify({
-        text: text,
-        model: "aura-asteria-en"
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, model: "aura-asteria-en" })
     });
 
-    const blob = await response.blob();
-    console.log("🔊 Deepgram blob type:", blob.type);
-
-    // ✅ If response is not audio, print the actual error message
-    if (!blob.type.startsWith("audio/")) {
-      const errorText = await blob.text();
-      console.error("❌ Invalid audio blob response from Deepgram:", errorText);
+    if (!res.ok) {
+      console.error("❌ Backend TTS failed:", await res.text());
       return;
     }
 
-    const audio = new Audio(URL.createObjectURL(blob));
-    audio.play();
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
 
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.playsInline = true;
+    audio.src = url;
+    currentAudio = audio;
+
+    // When called inside a click handler (Submit / Start), autoplay policies allow this
+    await audio.play();
+
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      if (currentAudio === audio) currentAudio = null;
+    };
   } catch (err) {
     console.error("🔇 TTS playback failed:", err);
   }
 };
 
-
-
-function QuestionComponent({ transcript, setCurrentQuestionId, clearTranscript, setCurrentQuestion }) {
+function QuestionComponent({
+  transcript,
+  setCurrentQuestionId,
+  clearTranscript,
+  setCurrentQuestion,
+  onReadyToExit
+}) {
   const location = useLocation();
   const { name, resumeId, role } = location.state || {};
 
+  const [hasStarted, setHasStarted] = useState(false);
   const [question, setQuestion] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
   const [answer, setAnswer] = useState('');
+  const [isEnding, setIsEnding] = useState(false);
 
+  // Total questions allowed (intro + follow-ups)
+  const MAX_QUESTIONS = 6;
+
+  // Keep input synced with latest mic transcript
   useEffect(() => {
-    if (!name) return;
-
-    const first = generateFirstQuestion(name);
-    setQuestion(first);
-    setCurrentQuestionId('q1');
-    setLoading(false);
-    setCurrentQuestion(first);
-    speakQuestion(first);
-  }, [name, setCurrentQuestionId, setCurrentQuestion]);
-
-  useEffect(() => {
-    if (transcript) {
-      setAnswer(transcript);
-    }
+    if (transcript) setAnswer(transcript);
   }, [transcript]);
 
+  // Start interview on click (prevents autoplay block for the very first question)
+  const startInterview = async () => {
+    if (hasStarted || !name) return;
+    const first = generateFirstQuestion(name);
+    setHasStarted(true);
+    setLoading(false);
+    setQuestion(first);
+    setCurrentQuestionId('q1');
+    setCurrentQuestion(first);
+
+    // Speak the first question within the same user gesture
+    await speakQuestion(first);
+  };
+
   const handleSubmit = async () => {
-    if (!answer.trim()) return;
+    if (!answer.trim() || isEnding) return;
 
     const updatedHistory = [...history, { question, answer }];
     setHistory(updatedHistory);
     setAnswer('');
+    clearTranscript?.();
 
-    if (clearTranscript) clearTranscript();
+    // Next human-friendly index after this submission
+    const nextCount = updatedHistory.length + 1;
 
-    const nextQuestionId = `q${updatedHistory.length + 1}`;
-    setCurrentQuestionId(nextQuestionId);
+    // If we've already asked & answered MAX_QUESTIONS, now we do the goodbye
+    if (nextCount > MAX_QUESTIONS) {
+      const bye = generateLastQuestion(name);
+      setQuestion(bye);
+      setCurrentQuestionId('end');
+      setCurrentQuestion(bye);
+      setIsEnding(true);
 
+      // 🔊 Speak farewell as part of the click chain
+      await speakQuestion(bye);
+
+      // Optional: auto-exit after a short delay
+      setTimeout(() => onReadyToExit?.(), 3500);
+      return;
+    }
+
+    // Otherwise fetch the next question
     setLoading(true);
     const nextQ = await generateNextQuestion(resumeId, role);
     setQuestion(nextQ);
     setCurrentQuestion(nextQ);
-    speakQuestion(nextQ)
+    setCurrentQuestionId(`q${nextCount}`);
     setLoading(false);
+
+    // 🔊 Speak the next question immediately after submit (still user-initiated)
+    await speakQuestion(nextQ);
   };
+
+  // Live counter: answered so far + currently shown
+  const questionCount = history.length + (question ? 1 : 0);
 
   return (
     <div className="question-panel">
-      <h2>Interview Question</h2>
-      <div className="question-card">
-        {loading ? (
-          <p>Loading question...</p>
-        ) : (
-          <p><strong>Q:</strong> {question}</p>
-        )}
-
-        <div className="answer-box">
-          <input
-            type="text"
-            placeholder="Type your answer or use audio"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-          />
-          <button className="submit-btn" onClick={handleSubmit} disabled={loading}>✅ Submit</button>
-        </div>
-
-        {transcript && (
-          <div className="transcript-box">
-            <h4>📝 Transcript:</h4>
-            <p>{transcript}</p>
-          </div>
+      <div className="question-header">
+        <h2>{hasStarted ? `Interview Question ${questionCount}` : 'Ready to start?'}</h2>
+        {hasStarted && question && !isEnding && (
+          <button
+            className="play-btn"
+            onClick={() => speakQuestion(question)}
+            title="Play question audio"
+          >
+            🔊 Play
+          </button>
         )}
       </div>
+
+      {!hasStarted ? (
+        <div className="question-card">
+          <p>Click below to begin. We’ll read the first question out loud.</p>
+          <button className="submit-btn" onClick={startInterview}>
+            ▶️ Start Interview
+          </button>
+        </div>
+      ) : (
+        <div className="question-card">
+          {loading ? (
+            <p>Loading question...</p>
+          ) : (
+            <p><strong>Q:</strong> {question}</p>
+          )}
+
+          <div className="answer-box">
+            <input
+              type="text"
+              placeholder="Type your answer or use audio"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              disabled={isEnding}
+            />
+            <button
+              className="submit-btn"
+              onClick={handleSubmit}
+              disabled={loading || isEnding}
+            >
+              {isEnding ? 'Finishing…' : '✅ Submit'}
+            </button>
+          </div>
+
+          {transcript && (
+            <div className="transcript-box">
+              <h4>📝 Transcript:</h4>
+              <p>{transcript}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {history.length > 0 && (
         <div className="questions-list">

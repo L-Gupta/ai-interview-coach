@@ -10,13 +10,13 @@ async def upload_resume(file: UploadFile = File(...), resume_id: str = Form(...)
         raise HTTPException(status_code=400, detail="Only PDF and DOCX files are allowed.")
 
     try:
-        save_filename = save_resume_and_init_reports(file, resume_id)
-        result = run_pipeline(save_filename, resume_id=resume_id)
+        save_filename, safe_resume_id = save_resume_and_init_reports(file, resume_id)
+        result = run_pipeline(save_filename, resume_id=safe_resume_id)
 
         return {
             "message": "Resume processed successfully",
             "filename": save_filename,
-            "resume_id": resume_id,
+            "resume_id": safe_resume_id,
             **result
         }
 

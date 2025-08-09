@@ -97,7 +97,9 @@ const AVComponent = forwardRef(({ onTranscript, onTone, onEmotion, resume_id, cu
         });
         const toneData = await toneRes.json();
         console.log("✅ /tone-analysis response:", toneData);
-        if (onTone && toneData.emotions) onTone(toneData.emotions);
+        const qid = currentQuestionId || "q1";
+        const tones = (toneData && (toneData[qid] || toneData.tone || toneData.emotions)) || [];
+        if (onTone) onTone(tones);
 
         // Stop and process video recording
         camRecorderRef.current.stopRecording(async () => {

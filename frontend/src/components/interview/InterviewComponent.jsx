@@ -74,6 +74,7 @@ function InterviewComponent() {
           setCurrentQuestionId={setCurrentQuestionId}
           clearTranscript={clearTranscript}
           setCurrentQuestion={setCurrentQuestion}
+          onReadyToExit = {handleExit}
         />
       </div>
     </div>

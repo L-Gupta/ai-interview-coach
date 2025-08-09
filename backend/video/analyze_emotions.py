@@ -3,10 +3,10 @@ from collections import Counter
 import cv2, json
 from pathlib import Path
 
-REPORTS_DIR = Path("data")
+REPORTS_DIR = Path("end/reports")
 
 # Load the model globally to avoid reloading per frame
-_emotion_detector = FER(mtcnn=True)
+_emotion_detector = FER(mtcnn=False)
 
 """Detects the dominant emotion in a single video frame."""
 """

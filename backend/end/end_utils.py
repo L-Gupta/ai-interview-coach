@@ -58,7 +58,7 @@ async def save_summary_data(resume_id: str, summary_data: dict, pdf_url: str = "
 """Compiles a PDF report from the final summary dictionary."""
 async def compile_pdf_report(summary_data: dict) -> str:
     try:
-        resume_id = summary_data.get("resume_id")
+        resume_id = summary_data.get("resume_id") or "unknown"
         save_dir = REPORTS_DIR / resume_id
         os.makedirs(save_dir, exist_ok=True)
         filepath = save_dir / "summary.pdf"
@@ -97,16 +97,16 @@ async def compile_pdf_report(summary_data: dict) -> str:
 
         # --- Section 1: Expression & Tone
         draw_heading("Expression & Tone Analysis")
-        draw_text("Tone Summary", summary_data["tone_report"].get("tone_summary", "N/A"))
-        draw_text("Expression Summary", summary_data["expression_report"].get("expression_summary", "N/A"))
+        draw_text("Tone Summary", summary_data.get("tone_report", {}).get("tone_summary", "N/A"))
+        draw_text("Expression Summary", summary_data.get("expression_report", {}).get("expression_summary", "N/A"))
 
         # --- Section 2: Accuracy & Validation
         draw_heading("Accuracy & Validation")
-        acc = summary_data["accuracy_scores"]
+        acc = summary_data.get("accuracy_scores", {}) or {}
         draw_text("Accuracy Score", f"{acc.get('overall', 'N/A')}%")
         draw_text("Comment", acc.get("comment", ""))
 
-        val = summary_data["validation_summary"]
+        val = summary_data.get("validation", {}) or summary_data.get("validation_summary", {}) or {}
         draw_text("Matches", val.get("match_count", 0), indent=20)
         draw_text("Exaggerated", val.get("exaggerated_count", 0), indent=20)
         draw_text("Vague", val.get("vague_count", 0), indent=20)
@@ -116,13 +116,14 @@ async def compile_pdf_report(summary_data: dict) -> str:
         draw_text("Job Fit Score", f"{summary_data.get('job_fit_score', 'N/A')}%")
         draw_text("Comment", summary_data.get("job_fit_comment", ""))
 
-        soft = summary_data.get("soft_skills", {})
-        for skill, level in soft.items():
-            draw_text(skill.capitalize(), level, indent=10)
+        soft = summary_data.get("soft_skills", {}) or {}
+        if isinstance(soft, dict):
+            for skill, level in soft.items():
+                draw_text(skill.capitalize(), level, indent=10)
 
         # --- Section 4: Suggestions
         suggestions = summary_data.get("suggestions", [])
-        if suggestions:
+        if isinstance(suggestions, list) and suggestions:
             draw_heading("Suggestions")
             draw_multiline_text("Tips", suggestions)
 
