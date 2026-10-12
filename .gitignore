@@ -57,3 +57,7 @@ Thumbs.db
 
 # Personal tracking
 TODO.md
+
+# Runtime data
+uploads/
+reports/
