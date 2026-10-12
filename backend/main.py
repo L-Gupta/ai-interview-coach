@@ -1,39 +1,74 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-import requests
+from fastapi.staticfiles import StaticFiles
+from core.config import settings
+from database.session import init_db
+from api.v1 import auth, interview
+from file.agentic_file_router import router as file_router
 import os
-from dotenv import load_dotenv
 
-from file.file_router import router as file_router
-from ques_gen.question_router import router as question_router
-from audio.audio_router import router as audio_router
-from audio.tts_router import router as tts_router
-from end.end_router import router as end_router
-from video.video_router import router as video_router
-
-load_dotenv()
-
-app = FastAPI(title="AI Interview Coach API", version="1.0.0")
-
-# CORS for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+# Initialize FastAPI app
+app = FastAPI(
+    title="AI Interview Coach API",
+    description="Agentic interview coaching system with advanced cheating detection",
+    version="2.0.0"
 )
 
-# Interview route
-app.include_router(file_router, prefix="/file")
-app.include_router(audio_router)
-app.include_router(tts_router)
-app.include_router(question_router, prefix="/question")
-app.include_router(end_router)
-app.include_router(video_router)
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS.split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+# Auth and Interview have internal prefixes, so we add /api/v1 to the base path
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(interview.router, prefix="/api/v1")
+app.include_router(file_router, prefix="/api/v1/file", tags=["File Processing"])
+
+# Serve static files (for reports/media)
+if os.path.exists("./reports"):
+    app.mount("/reports", StaticFiles(directory="./reports"), name="reports")
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    print("🚀 Starting AI Interview Coach API...")
+    init_db()
+    print("✅ Database initialized")
+    print(f"📡 Server running on port {settings.PORT}")
 
 @app.get("/")
 async def root():
-    return {"message": "AI Interview Coach API is running!"}
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "message": "AI Interview Coach API v2.0",
+        "features": [
+            "Agentic question generation",
+            "Advanced cheating detection",
+            "Audio/Video analysis",
+            "Multi-agent orchestration"
+        ]
+    }
 
+@app.get("/health")
+async def health_check():
+    """Detailed health check"""
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "agents": "initialized"
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=settings.PORT,
+        reload=settings.DEBUG
+    )

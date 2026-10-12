@@ -1,0 +1,43 @@
+# Frontend Dependencies Reference
+# Note: Frontend uses npm/package.json for Node.js dependencies, not Python pip
+# This file is for reference only - actual installation uses: npm install
+
+# Build Tool & Runtime
+react@19.1.0
+react-dom@19.1.0
+react-scripts@5.0.1
+
+# Routing & Navigation
+react-router-dom@7.6.3
+
+# Media Capture
+react-webcam@7.2.0
+recordrtc@5.6.2
+
+# HTTP Client & Data
+axios@1.6.2
+
+# Form Management
+react-hook-form@7.48.0
+react-dropzone@14.2.3
+
+# Utilities
+classnames@2.3.2
+date-fns@2.30.0
+
+# Testing (Optional)
+@testing-library/react@16.3.0
+@testing-library/jest-dom@6.6.3
+@testing-library/user-event@13.5.0
+@testing-library/dom@10.4.0
+
+# Development Dependencies
+@babel/plugin-proposal-private-property-in-object@7.21.11
+
+# Performance Monitoring
+web-vitals@2.1.4
+
+# Installation
+# npm install
+# or
+# npm ci (for production builds)
