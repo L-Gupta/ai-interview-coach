@@ -54,3 +54,6 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+
+# Personal tracking
+TODO.md
